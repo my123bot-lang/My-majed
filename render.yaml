@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: majed-whatsapp-bot
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node cloud.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: CLOUD
+        value: "1"
+      - key: ADMIN_HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      - key: INTERAKT_API_KEY
+        sync: false
+      - key: INTERAKT_WEBHOOK_SECRET
+        sync: false
+      - key: CALC_BRIDGE_API_KEY
+        sync: false
+      - key: INTERAKT_REPLY_TEMPLATE
+        value: bot_reply
+      - key: INTERAKT_COUNTRY_CODE
+        value: "+966"

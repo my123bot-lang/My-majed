@@ -1,0 +1,10 @@
+node_modules
+.git
+.env
+.env.*
+!.env.example
+.wwebjs_auth
+.wwebjs_cache
+*.log
+.DS_Store
+npm-debug.log*

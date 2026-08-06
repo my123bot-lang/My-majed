@@ -12,7 +12,7 @@ call npm run unlock
 echo.
 echo Starting WhatsApp bot (Majed) - do not close this window.
 echo.
-call start-majed.bat
+node bot.js majed
 echo.
 echo Bot stopped. Check messages above.
 pause

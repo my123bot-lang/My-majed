@@ -25,14 +25,24 @@ const waAccounts = require("./lib/whatsapp-accounts-store");
 const botStatus = require("./lib/bot-status");
 const { collectShareableLanIps } = require("./lib/lan-host");
 
-const PORT = Number(process.env.ADMIN_PORT) || 3000;
+const PORT = Number(process.env.PORT || process.env.ADMIN_PORT) || 3000;
 const HOST = process.env.ADMIN_HOST || "0.0.0.0";
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
 
 adminAuth.bootstrapFromEnv();
 
 const app = express();
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf ? buf.toString("utf8") : "";
+    },
+  })
+);
+
+// كوبري الحسبة + Webhook Interakt (سحابي)
+app.use("/api/calc", require("./routes/calc"));
+app.use("/webhooks/interakt", require("./routes/interakt-webhook"));
 
 function extractToken(req) {
   const auth = String(req.headers.authorization || "");
@@ -627,28 +637,42 @@ function printStartupBanner() {
   console.log("============================================\n");
 }
 
-const server = app.listen(PORT, HOST, () => {
-  printStartupBanner();
-  setTimeout(() => openBrowser(LOCAL_URL), 400);
-});
+function startServer({ openAdminBrowser = true } = {}) {
+  const server = app.listen(PORT, HOST, () => {
+    printStartupBanner();
+    if (openAdminBrowser && process.env.CLOUD !== "1") {
+      setTimeout(() => openBrowser(LOCAL_URL), 400);
+    }
+  });
 
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error("============================================");
-    console.error(`  المنفذ ${PORT} مستخدم مسبقاً`);
-    console.error("============================================");
-    console.error("  اللوحة قد تكون شغّالة بالفعل. جرّب فتح:");
-    console.error(`  ${LOCAL_URL}`);
-    console.error("");
-    console.error("  لإيقاف النسخة القديمة (PowerShell كمسؤول):");
-    console.error(`  netstat -ano | findstr :${PORT}`);
-    console.error("  taskkill /PID <رقم_العملية> /F");
-    console.error("");
-    console.error("  أو شغّل على منفذ آخر:");
-    console.error("  set ADMIN_PORT=3001 && npm run admin");
-    console.error("============================================\n");
-    openBrowser(LOCAL_URL);
-    process.exit(1);
-  }
-  throw err;
-});
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error("============================================");
+      console.error(`  المنفذ ${PORT} مستخدم مسبقاً`);
+      console.error("============================================");
+      console.error("  اللوحة قد تكون شغّالة بالفعل. جرّب فتح:");
+      console.error(`  ${LOCAL_URL}`);
+      console.error("");
+      console.error("  لإيقاف النسخة القديمة (PowerShell كمسؤول):");
+      console.error(`  netstat -ano | findstr :${PORT}`);
+      console.error("  taskkill /PID <رقم_العملية> /F");
+      console.error("");
+      console.error("  أو شغّل على منفذ آخر:");
+      console.error("  set ADMIN_PORT=3001 && npm run admin");
+      console.error("============================================\n");
+      if (openAdminBrowser && process.env.CLOUD !== "1") {
+        openBrowser(LOCAL_URL);
+      }
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, startServer, PORT, HOST };

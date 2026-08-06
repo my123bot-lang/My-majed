@@ -1,50 +1,122 @@
-# WhatsApp Direct Bot (ماجد)
+# WhatsApp Bot — ماجد (Interakt + سحابة + كوبري الحسبة)
 
-بوت واتساب للتمويل الشخصي وشراء المديونية، مع لوحة تحكم إدارية — حساب **ماجد** فقط.
+بوت تمويل شخصي عبر **Interakt WhatsApp API** مع نشر سحابي وكوبري HTTP للحسبة.
 
-## المتطلبات
+## المعمارية
 
-- Node.js 18+
-- Google Chrome (Windows) أو Chromium (Linux)
-- حساب واتساب لمسح رمز QR عند أول تشغيل
+```
+عميل واتساب
+    ↓
+Interakt (رقم واتساب الرسمي)
+    ↓ webhook message_received
+الخادم السحابي (cloud.js)
+    ├─ بوت المحادثة (handlers)
+    ├─ كوبري الحسبة (/api/calc/*)
+    └─ لوحة التحكم (/)
+    ↓ قالب bot_reply {{1}}
+Interakt → العميل
+```
 
-## التثبيت
+## التشغيل المحلي (سحابي)
 
 ```bash
 npm install
 cp .env.example .env
+# عبّئ INTERAKT_API_KEY و INTERAKT_WEBHOOK_SECRET
+npm run cloud
 ```
 
-عدّل `.env` حسب الحاجة:
+- لوحة التحكم: `http://127.0.0.1:3000`
+- كوبري الحسبة: `POST /api/calc/personal`
+- Webhook: `POST /webhooks/interakt`
 
-```env
-ADMIN_PORT=3000
-ADMIN_HOST=0.0.0.0
-# PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
-# PUPPETEER_HEADLESS=1
-# WA_ACCOUNT_ID=majed
+## كوبري الحسبة
+
+مصادقة اختيارية عبر `CALC_BRIDGE_API_KEY` (هيدر `X-Api-Key`).
+
+### نسب الفوائد
+`GET /api/calc/rates`
+
+### تمويل شخصي
+```bash
+curl -X POST http://127.0.0.1:3000/api/calc/personal \
+  -H 'Content-Type: application/json' \
+  -H 'X-Api-Key: YOUR_KEY' \
+  -d '{
+    "jobCategory": "civilian",
+    "salary": 10000,
+    "commitments": 1000,
+    "realEstate": "none"
+  }'
 ```
 
-## التشغيل
+`jobCategory`: `military` | `civilian` | `retired`  
+`realEstate`: `supported` | `unsupported` | `none` | `old`
 
-### لوحة التحكم
+### شراء مديونية
+```bash
+curl -X POST http://127.0.0.1:3000/api/calc/debt \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jobCategory": "civilian",
+    "salary": 12000,
+    "commitments": 1500,
+    "debtAmount": 20000
+  }'
+```
+
+### قسط فقط
+```bash
+curl -X POST http://127.0.0.1:3000/api/calc/installment \
+  -H 'Content-Type: application/json' \
+  -d '{ "amount": 10000, "interestRate": 13, "jobCategory": "civilian" }'
+```
+
+يمكن ربط هذه المسارات من **Interakt Workflow / Zapier / Make** كخطوة «كوبري».
+
+## إعداد Interakt
+
+1. خطة **Advanced** على الأقل (لاستقبال webhooks للرسائل الواردة).
+2. Developer Settings → انسخ **API Key** وحدد **Webhook URL**:
+   `https://YOUR-DOMAIN/webhooks/interakt`
+3. ضع نفس **Secret Key** في `INTERAKT_WEBHOOK_SECRET`.
+4. أنشئ قالب واتساب معتمد:
+   - الاسم: `bot_reply` (أو قيمة `INTERAKT_REPLY_TEMPLATE`)
+   - اللغة: `ar`
+   - الفئة: Utility
+   - النص: `{{1}}`
+5. اربط رقم واتساب بيزنس بماجد في Interakt.
+
+> واجهة Interakt العامة ترسل **قوالب** فقط؛ لذلك الردود تمر عبر قالب `bot_reply` الذي يحمل نص الرد كاملاً في `{{1}}`.
+
+## النشر السحابي
+
+### Docker
+```bash
+docker build -t majed-bot .
+docker run -p 3000:3000 --env-file .env majed-bot
+```
+
+### Render
+- اربط المستودع؛ الملف `render.yaml` جاهز.
+- عيّن الأسرار: `INTERAKT_API_KEY`, `INTERAKT_WEBHOOK_SECRET`, `CALC_BRIDGE_API_KEY`.
+
+### Railway / أي Node host
+```bash
+npm run cloud
+```
+المتغير `PORT` يُقرأ تلقائياً.
+
+بعد النشر: حدّث Webhook URL في Interakt إلى نطاقك العام (HTTPS).
+
+## التشغيل القديم (واتساب ويب على جهازك)
+
+ما زال متاحاً للتطوير المحلي:
 
 ```bash
+npm start          # أو start-majed.bat
 npm run admin
 ```
-
-افتح `http://127.0.0.1:3000` — عند أول تشغيل أنشئ مستخدم المدير من الواجهة.
-
-### بوت واتساب (ماجد)
-
-```bash
-npm start
-# أو
-node bot.js majed
-# Windows: start-majed.bat أو start-bot.bat
-```
-
-امسح QR من نافذة Chrome أو من لوحة التحكم.
 
 ## الحساب
 
@@ -52,12 +124,6 @@ node bot.js majed
 |---------|---------|
 | `majed` | ماجد |
 
-الإعدادات في `data/settings-by-wa.json` و `data/settings.json`.
-
 ## الأمان
 
-المستودع عام — لا ترفع جلسات واتساب (`.wwebjs_auth`) ولا كلمات مرور اللوحة ولا سجل العملاء.
-
-## تعديل الرسائل والشروط
-
-عدّل `config.js` فقط لتغيير النصوص، النسب، الحدود، وأرقام التواصل. منطق التدفق في `lib/handlers.js`.
+لا ترفع `.env` ولا جلسات واتساب ولا سجل العملاء. المستودع عام.
