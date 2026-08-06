@@ -1,57 +1,55 @@
-# WhatsApp Bot — ماجد (Meta Cloud API + كوبري الحسبة)
+# WhatsApp Bot — ماجد على Interakt + السحابة
 
-ردود **حرة** عبر WhatsApp Cloud API خلال 24 ساعة من رسالة العميل، مع لوحة تحكم وكوبري حسبة.
+**نفس نظام الردود الأصلي** (`handlers` + `config` + الحسبة) — على Interakt والسحابة.
 
-## المعمارية
+> ملاحظة تقنية فقط: Interakt يفرض إرسال الرد عبر قالب واحد `bot_reply` نصه `{{1}}`.  
+> هذا غلاف نقل، مو تغيير للمنطق أو أسئلة البوت.
+
+## التدفق
 
 ```
-عميل واتساب
-    ↓
-Meta WhatsApp Cloud API
-    ↓ webhook /webhooks/meta
-الخادم السحابي (cloud.js)
-    ├─ بوت المحادثة (handlers) — رد حر نصّي
-    ├─ كوبري الحسبة (/api/calc/*)
-    └─ لوحة التحكم
+عميل → Interakt → webhook /webhooks/interakt
+                 → handlers (نفس البوت الأول)
+                 → رد عبر قالب bot_reply {{1}}
+                 → العميل
 ```
 
-## المطلوب من Meta
+## إعداد Interakt (مرة واحدة)
 
-1. تطبيق على [developers.facebook.com](https://developers.facebook.com)
-2. إضافة منتج **WhatsApp** وربط رقم الأعمال
-3. انسخ:
-   - **Temporary/Permanent Access Token** → `META_WA_TOKEN`
-   - **Phone number ID** → `META_WA_PHONE_NUMBER_ID`
-   - **App Secret** → `META_APP_SECRET`
-4. Webhook URL: `https://YOUR-DOMAIN/webhooks/meta`
-5. Verify token: نفس `META_WA_VERIFY_TOKEN` (افتراضي `majed_verify`)
-6. اشترك في حقل **messages**
+1. Developer Settings → API Key + Webhook Secret (تم)
+2. Webhook URL:
+   `https://YOUR-DOMAIN/webhooks/interakt`
+3. فعّل: **Message received from customers**
+4. Templates → أنشئ واعتمد:
+   - الاسم: `bot_reply`
+   - اللغة: `ar`
+   - الفئة: Utility
+   - النص: `{{1}}`
 
-## التشغيل
+بدون اعتماد هذا القالب لن يخرج أي رد (قيود Interakt/Meta).
+
+## التشغيل السحابي
 
 ```bash
 npm install
 cp .env.example .env
-# عبّئ META_WA_TOKEN و META_WA_PHONE_NUMBER_ID
+# INTERAKT_API_KEY + INTERAKT_WEBHOOK_SECRET
 npm run cloud
 ```
 
-- لوحة: `http://127.0.0.1:3000`
-- Webhook: `POST/GET /webhooks/meta`
-- حسبة: `POST /api/calc/personal`
+Docker / Render جاهزان (`Dockerfile`, `render.yaml`).
 
 ## كوبري الحسبة
 
+نفس معادلات البوت:
+
+- `POST /api/calc/personal`
+- `POST /api/calc/debt`
+- `GET  /api/calc/rates`
+
+## محلي (واتساب ويب) للتطوير
+
 ```bash
-curl -X POST http://127.0.0.1:3000/api/calc/personal \
-  -H 'Content-Type: application/json' \
-  -d '{"jobCategory":"civilian","salary":10000,"commitments":1000,"realEstate":"none"}'
+npm start          # node bot.js majed
+npm run admin
 ```
-
-## نسب الفوائد
-
-- عسكري: 18.5% | مدني/متقاعد: 13% | شراء مديونية: 12%
-
-## ملاحظة
-
-خارج نافذة 24 ساعة Meta ترفض النص الحر وتلزم قالب — هذا البوت للمحادثة التفاعلية بعد رسالة العميل.

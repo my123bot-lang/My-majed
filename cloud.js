@@ -1,23 +1,26 @@
 /**
- * تشغيل سحابي — لوحة + كوبري حسبة + Meta WhatsApp Cloud API
+ * تشغيل سحابي — Interakt + كوبري الحسبة + نفس نظام ردود البوت الأصلي
  * npm run cloud
  */
 process.env.CLOUD = "1";
 
 const { startServer, PORT, HOST } = require("./server");
-const meta = require("./lib/meta-client");
+const interakt = require("./lib/interakt-client");
 
 console.log("");
 console.log("============================================");
-console.log("  Cloud mode — Majed via Meta Cloud API");
+console.log("  Cloud — Majed bot via Interakt");
 console.log(`  Listening ${HOST}:${PORT}`);
-console.log("  Calc bridge:   POST /api/calc/personal");
-console.log("  Meta webhook:  GET/POST /webhooks/meta");
+console.log("  Same handlers/config as original bot");
+console.log("  Calc bridge:    POST /api/calc/personal");
+console.log("  Interakt WH:    POST /webhooks/interakt");
 console.log(
-  "  Meta send:     ",
-  meta.isConfigured() ? "configured" : "MISSING TOKEN / PHONE_NUMBER_ID"
+  "  Interakt send:  ",
+  interakt.isConfigured()
+    ? `ON (template ${interakt.getConfig().replyTemplate})`
+    : "MISSING INTERAKT_API_KEY"
 );
-console.log("  Admin UI:      GET  /");
+console.log("  Admin UI:       GET  /");
 console.log("============================================");
 console.log("");
 
