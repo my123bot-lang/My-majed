@@ -761,7 +761,10 @@ ${phone}
 ${agentPhone}
 ${attribution || "من طرف ماجد"}`,
 
-    serviceStopDeclined: () => "تشرفنا بك وبالتوفيق",
+    serviceStopDeclined: () =>
+      `نعتذر منك بالتوفيق
+أي استفسارات حياك الله بأي وقت
+الرد الآلي شغال بأي وقت إذا تبي تحسب لشخص آخر`,
 
     serviceStopContactQuestion: () =>
       `هل تبي رقم المندوب؟
