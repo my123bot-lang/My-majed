@@ -60,7 +60,7 @@ module.exports = {
       retired: 4000,
     },
     /** أقل مبلغ تقديري للقبول في المسار الشخصي */
-    minEstimatedAmount: 19900,
+    minEstimatedAmount: 15000,
     /** حد راتب مسار التمويل العقاري */
     propertyMinSalary: 7000,
     /** حد إيقاف الخدمات/التعثرات (يُسأل عنه نعم/لا وليس رقماً مباشرة) */
@@ -98,7 +98,7 @@ module.exports = {
       minEntrySalary: 4000,
       flow: "standard",
       comboFallback:
-        "no_property + salary >= 7000 + amount < 19900 + commitments >= 25% of salary",
+        "no_property + salary >= 7000 + amount < 15000 + commitments >= 25% of salary",
     },
     retired: {
       sameAs: "civilian",
