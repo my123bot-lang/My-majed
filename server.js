@@ -333,7 +333,9 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
-    features: { deleteLead: true },
+    features: { deleteLead: true, menuStartOnly: true },
+    gitCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || null,
+    gitBranch: process.env.RENDER_GIT_BRANCH || process.env.GIT_BRANCH || null,
   });
 });
 
