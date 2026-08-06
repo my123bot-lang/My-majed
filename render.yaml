@@ -24,6 +24,6 @@ services:
       - key: INTERAKT_REPLY_LANGUAGE
         value: ar
       - key: INTERAKT_SEND_MODE
-        value: template
+        value: auto
       - key: INTERAKT_COUNTRY_CODE
         value: "+966"
