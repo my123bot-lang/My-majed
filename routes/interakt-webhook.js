@@ -90,6 +90,37 @@ router.post("/", (req, res) => {
       console.warn("[interakt] رسالة واردة بلا رقم");
       return;
     }
+    const phoneTail = String(inbound.phone || "").slice(-4);
+    console.log(
+      "[interakt] وارد:",
+      JSON.stringify({
+        body: inbound.body,
+        contentType: inbound.contentType,
+        phoneTail,
+        customerId: inbound.customerId,
+        rawCustomer: inbound.rawCustomer,
+      })
+    );
+    try {
+      const fs = require("fs");
+      fs.writeFileSync(
+        "/tmp/interakt-last-inbound.json",
+        JSON.stringify(
+          {
+            at: new Date().toISOString(),
+            body: inbound.body,
+            contentType: inbound.contentType,
+            phone: inbound.phone,
+            rawCustomer: inbound.rawCustomer,
+            message: payload?.data?.message || null,
+          },
+          null,
+          2
+        )
+      );
+    } catch (_) {
+      /* ignore */
+    }
     setImmediate(() => {
       processInbound(inbound).catch((err) =>
         console.error("[interakt] فشل غير متزامن:", err)
