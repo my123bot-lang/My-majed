@@ -16,7 +16,7 @@ console.log("  Bridge:         POST /webhooks/interakt");
 console.log(
   "  Interakt send:  ",
   interakt.isConfigured()
-    ? `ON (template ${interakt.getConfig().replyTemplate})`
+    ? `ON (mode ${interakt.getConfig().sendMode})`
     : "MISSING INTERAKT_API_KEY"
 );
 console.log("  Admin / portal: GET  /");
