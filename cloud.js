@@ -2,6 +2,7 @@
  * تشغيل سحابي — كوبري Interakt → نفس حسبة وردود البوت الأصلي
  * npm run cloud
  */
+require("./lib/load-env").loadEnvFile();
 process.env.CLOUD = "1";
 
 const { startServer, PORT, HOST } = require("./server");
