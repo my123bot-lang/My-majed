@@ -41,11 +41,35 @@ Docker / Render جاهزان (`Dockerfile`, `render.yaml`).
 
 ## كوبري الحسبة
 
-نفس معادلات البوت:
+نفس معادلات البوت — واجهة + API:
 
+- واجهة: `GET /calc.html`
 - `POST /api/calc/personal`
 - `POST /api/calc/debt`
 - `GET  /api/calc/rates`
+
+### تشغيل حي الآن (نفق مؤقت)
+
+السيرفر السحابي يعمل عبر Cloudflare Tunnel:
+
+- الحسبة: https://romantic-medications-bargains-reward.trycloudflare.com/calc.html
+- النسب: https://romantic-medications-bargains-reward.trycloudflare.com/api/calc/rates
+- Webhook Interakt: `https://romantic-medications-bargains-reward.trycloudflare.com/webhooks/interakt`
+
+> هذا الرابط مؤقت ويتغيّر إذا أُعيد تشغيل النفق. للرفع الدائم استخدم Render أدناه.
+
+### رفع دائم على Render
+
+1. افتح [Render](https://dashboard.render.com) → New → Blueprint → اربط مستودع `My-majed`
+2. أو New → Web Service من الفرع، Start: `node cloud.js`
+3. أضف Environment Variables من `.env`:
+   - `INTERAKT_API_KEY`
+   - `INTERAKT_WEBHOOK_SECRET`
+   - `INTERAKT_REPLY_TEMPLATE=bot_reply`
+   - `INTERAKT_REPLY_LANGUAGE=ar`
+   - `INTERAKT_COUNTRY_CODE=+966`
+   - `CLOUD=1`
+4. بعد النشر حدّث Webhook في Interakt إلى: `https://YOUR-RENDER-URL/webhooks/interakt`
 
 ## محلي (واتساب ويب) للتطوير
 

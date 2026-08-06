@@ -21,5 +21,9 @@ services:
         sync: false
       - key: INTERAKT_REPLY_TEMPLATE
         value: bot_reply
+      - key: INTERAKT_REPLY_LANGUAGE
+        value: ar
+      - key: INTERAKT_SEND_MODE
+        value: template
       - key: INTERAKT_COUNTRY_CODE
         value: "+966"
