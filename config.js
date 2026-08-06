@@ -215,6 +215,8 @@ module.exports = {
     propertyComboAgentName: "أبو تركي",
     propertyComboAgentPhone: "0506279834",
     propertyComboContactFooter: "من طرف ماجد\nربي يسر أمرك",
+    /** أرقام مسار إيقاف الخدمات بعد قبول الباقة */
+    serviceStopContactPhones: ["0506279834", "0546473109"],
     /** إيقاف الخدمات — المندوب عند رغبة العميل بالتواصل */
     serviceStopAgentName: "أبو تركي",
     serviceStopAgentPhone: "0506279834",
@@ -674,12 +676,33 @@ ${installmentFormatted} ريال`,
 ${propertyFormatted} ريال عقاري
 ${personalFormatted} ريال شخصي
 
-يعني 60% كاش حسب حسبتك بالبنك
+يعني 60% كاش حسب حسبتك بالبنك`,
 
-هل ترغب بهذا العرض؟
+    serviceStopQualifyQuestion: () =>
+      `هل راتبك الأساسي 7000 وما عليك عقاري؟`,
 
-1- نعم
-2- لا`,
+    serviceStopPackageOffer: (
+      totalFormatted,
+      propertyFormatted,
+      personalFormatted
+    ) =>
+      `الباقة المتاحة لك:
+
+شركة تسدد لك جميع التزاماتك وتستخرج لك
+مثال ${totalFormatted} ريال
+${propertyFormatted} ريال عقاري
+${personalFormatted} ريال شخصي
+
+يعني 60% كاش حسب حسبتك بالبنك`,
+
+    serviceStopTwoAgents: (phone1, phone2) =>
+      `للتواصل مع المندوبين:
+
+${phone1}
+${phone2}
+
+من طرف ماجد
+ربي يسر أمرك`,
 
     propertyComboAgentDirect: (agentName, agentPhone, footer) =>
       `للتواصل مع المندوب ${agentName}:
