@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>كوبري الحسبة — ماجد</title>
+  <style>
+    :root {
+      --bg: #0f1714;
+      --panel: #18241f;
+      --text: #e8f2ec;
+      --muted: #9bb5a8;
+      --accent: #2d6a4f;
+      --line: #2a3b34;
+      --ok: #3dba7a;
+      --bad: #e07070;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 80% -10%, #1d3a2d 0%, transparent 60%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    main { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 6px; }
+    p.lead { color: var(--muted); margin: 0 0 22px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tabs button {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: #214536;
+      border-color: #3a6b55;
+    }
+    label { display: block; margin: 10px 0 6px; color: var(--muted); font-size: 0.92rem; }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #101a16;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+    .actions { margin-top: 16px; display: flex; gap: 10px; }
+    .actions button {
+      border: 0;
+      background: #2f8f63;
+      color: white;
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #101a16;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 120px;
+      color: #d7ebe0;
+      font-size: 0.92rem;
+    }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>كوبري الحسبة</h1>
+    <p class="lead">نفس معادلات بوت ماجد — تمويل شخصي / شراء مديونية</p>
+
+    <div class="card">
+      <div class="tabs">
+        <button type="button" class="active" data-tab="personal">تمويل شخصي</button>
+        <button type="button" data-tab="debt">شراء مديونية</button>
+        <button type="button" data-tab="rates">النسب</button>
+      </div>
+
+      <form id="formPersonal">
+        <div class="row">
+          <div>
+            <label>القطاع</label>
+            <select id="pJob">
+              <option value="civilian">مدني</option>
+              <option value="military">عسكري</option>
+              <option value="retired">متقاعد</option>
+            </select>
+          </div>
+          <div>
+            <label>العقاري</label>
+            <select id="pRe">
+              <option value="none">لا يوجد</option>
+              <option value="supported">مدعوم</option>
+              <option value="unsupported">غير مدعوم</option>
+              <option value="old">قديم قسط 1667</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>الراتب</label>
+            <input id="pSalary" type="number" value="10000" min="0" />
+          </div>
+          <div>
+            <label>الالتزامات الشهرية</label>
+            <input id="pCommit" type="number" value="1000" min="0" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>بدل نائية (اختياري)</label>
+            <input id="pRemote" type="number" value="0" min="0" />
+          </div>
+          <div>
+            <label>الدعم الشهري (إن مدعوم)</label>
+            <input id="pSupport" type="number" value="0" min="0" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">احسب</button>
+        </div>
+      </form>
+
+      <form id="formDebt" class="hidden">
+        <div class="row">
+          <div>
+            <label>القطاع</label>
+            <select id="dJob">
+              <option value="civilian">مدني</option>
+              <option value="military">عسكري</option>
+              <option value="retired">متقاعد</option>
+            </select>
+          </div>
+          <div>
+            <label>مبلغ المديونية</label>
+            <input id="dDebt" type="number" value="20000" min="0" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>الراتب</label>
+            <input id="dSalary" type="number" value="12000" min="0" />
+          </div>
+          <div>
+            <label>الالتزامات</label>
+            <input id="dCommit" type="number" value="1500" min="0" />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit">احسب شراء المديونية</button>
+        </div>
+      </form>
+
+      <div id="ratesBox" class="hidden">
+        <div class="actions">
+          <button type="button" id="btnRates">عرض النسب والحدود</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="status" class="muted">النتيجة تظهر هنا</div>
+      <pre id="out">—</pre>
+    </div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const outEl = document.getElementById("out");
+    const forms = {
+      personal: document.getElementById("formPersonal"),
+      debt: document.getElementById("formDebt"),
+      rates: document.getElementById("ratesBox"),
+    };
+
+    document.querySelectorAll(".tabs button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        Object.values(forms).forEach((el) => el.classList.add("hidden"));
+        forms[btn.dataset.tab].classList.remove("hidden");
+      });
+    });
+
+    async function post(path, body) {
+      statusEl.textContent = "جاري الحساب…";
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      outEl.textContent = JSON.stringify(data, null, 2);
+      if (data.ok) {
+        const r = data.result || {};
+        if (data.type === "personal") {
+          statusEl.innerHTML = r.eligible
+            ? `<span class="ok">مؤهل — المبلغ ${r.amountFormatted} | القسط ${r.installmentFormatted}</span>`
+            : `<span class="bad">غير مؤهل — ${r.rejectReason || ""}</span>`;
+        } else if (data.type === "debt_purchase") {
+          statusEl.innerHTML = r.eligible
+            ? `<span class="ok">مؤهل — فائض ${r.surplusFormatted} | قسط ${r.installmentFormatted}</span>`
+            : `<span class="bad">غير مؤهل — ${r.reason || ""}</span>`;
+        } else {
+          statusEl.innerHTML = `<span class="ok">تم</span>`;
+        }
+      } else {
+        statusEl.innerHTML = `<span class="bad">${data.error || "فشل"}</span>`;
+      }
+    }
+
+    forms.personal.addEventListener("submit", (e) => {
+      e.preventDefault();
+      post("/api/calc/personal", {
+        jobCategory: document.getElementById("pJob").value,
+        realEstate: document.getElementById("pRe").value,
+        salary: Number(document.getElementById("pSalary").value),
+        commitments: Number(document.getElementById("pCommit").value),
+        remoteAllowance: Number(document.getElementById("pRemote").value),
+        supportAmount: Number(document.getElementById("pSupport").value),
+      });
+    });
+
+    forms.debt.addEventListener("submit", (e) => {
+      e.preventDefault();
+      post("/api/calc/debt", {
+        jobCategory: document.getElementById("dJob").value,
+        salary: Number(document.getElementById("dSalary").value),
+        commitments: Number(document.getElementById("dCommit").value),
+        debtAmount: Number(document.getElementById("dDebt").value),
+        realEstate: "none",
+      });
+    });
+
+    document.getElementById("btnRates").addEventListener("click", async () => {
+      statusEl.textContent = "جاري التحميل…";
+      const res = await fetch("/api/calc/rates");
+      const data = await res.json();
+      outEl.textContent = JSON.stringify(data, null, 2);
+      statusEl.innerHTML = `<span class="ok">النسب والحدود</span>`;
+    });
+  </script>
+</body>
+</html>
