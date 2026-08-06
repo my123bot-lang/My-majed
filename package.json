@@ -4,7 +4,8 @@
   "description": "",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
+    "start": "node bot.js majed",
+    "start:majed": "node bot.js majed",
     "cloud": "node cloud.js",
     "admin": "node server.js",
     "admin:open": "node -e \"require('child_process').exec('start http://127.0.0.1:3000')\"",
@@ -16,7 +17,7 @@
     "check-wa": "node scripts/check-wa-status.js",
     "repair-wa-accounts": "node scripts/repair-wa-accounts.js",
     "migrate-leads": "node scripts/migrate-leads-wa.js",
-    "restart": "node scripts/unlock-session.js && node bot.js",
+    "restart": "node scripts/unlock-session.js && node bot.js majed",
     "test:calc": "node scripts/smoke-calc.js",
     "test": "node scripts/smoke-calc.js"
   },

@@ -1,129 +1,57 @@
-# WhatsApp Bot — ماجد (Interakt + سحابة + كوبري الحسبة)
+# WhatsApp Bot — ماجد (Meta Cloud API + كوبري الحسبة)
 
-بوت تمويل شخصي عبر **Interakt WhatsApp API** مع نشر سحابي وكوبري HTTP للحسبة.
+ردود **حرة** عبر WhatsApp Cloud API خلال 24 ساعة من رسالة العميل، مع لوحة تحكم وكوبري حسبة.
 
 ## المعمارية
 
 ```
 عميل واتساب
     ↓
-Interakt (رقم واتساب الرسمي)
-    ↓ webhook message_received
+Meta WhatsApp Cloud API
+    ↓ webhook /webhooks/meta
 الخادم السحابي (cloud.js)
-    ├─ بوت المحادثة (handlers)
+    ├─ بوت المحادثة (handlers) — رد حر نصّي
     ├─ كوبري الحسبة (/api/calc/*)
-    └─ لوحة التحكم (/)
-    ↓ قالب bot_reply {{1}}
-Interakt → العميل
+    └─ لوحة التحكم
 ```
 
-## التشغيل المحلي (سحابي)
+## المطلوب من Meta
+
+1. تطبيق على [developers.facebook.com](https://developers.facebook.com)
+2. إضافة منتج **WhatsApp** وربط رقم الأعمال
+3. انسخ:
+   - **Temporary/Permanent Access Token** → `META_WA_TOKEN`
+   - **Phone number ID** → `META_WA_PHONE_NUMBER_ID`
+   - **App Secret** → `META_APP_SECRET`
+4. Webhook URL: `https://YOUR-DOMAIN/webhooks/meta`
+5. Verify token: نفس `META_WA_VERIFY_TOKEN` (افتراضي `majed_verify`)
+6. اشترك في حقل **messages**
+
+## التشغيل
 
 ```bash
 npm install
 cp .env.example .env
-# عبّئ INTERAKT_API_KEY و INTERAKT_WEBHOOK_SECRET
+# عبّئ META_WA_TOKEN و META_WA_PHONE_NUMBER_ID
 npm run cloud
 ```
 
-- لوحة التحكم: `http://127.0.0.1:3000`
-- كوبري الحسبة: `POST /api/calc/personal`
-- Webhook: `POST /webhooks/interakt`
+- لوحة: `http://127.0.0.1:3000`
+- Webhook: `POST/GET /webhooks/meta`
+- حسبة: `POST /api/calc/personal`
 
 ## كوبري الحسبة
 
-مصادقة اختيارية عبر `CALC_BRIDGE_API_KEY` (هيدر `X-Api-Key`).
-
-### نسب الفوائد
-`GET /api/calc/rates`
-
-### تمويل شخصي
 ```bash
 curl -X POST http://127.0.0.1:3000/api/calc/personal \
   -H 'Content-Type: application/json' \
-  -H 'X-Api-Key: YOUR_KEY' \
-  -d '{
-    "jobCategory": "civilian",
-    "salary": 10000,
-    "commitments": 1000,
-    "realEstate": "none"
-  }'
+  -d '{"jobCategory":"civilian","salary":10000,"commitments":1000,"realEstate":"none"}'
 ```
 
-`jobCategory`: `military` | `civilian` | `retired`  
-`realEstate`: `supported` | `unsupported` | `none` | `old`
+## نسب الفوائد
 
-### شراء مديونية
-```bash
-curl -X POST http://127.0.0.1:3000/api/calc/debt \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "jobCategory": "civilian",
-    "salary": 12000,
-    "commitments": 1500,
-    "debtAmount": 20000
-  }'
-```
+- عسكري: 18.5% | مدني/متقاعد: 13% | شراء مديونية: 12%
 
-### قسط فقط
-```bash
-curl -X POST http://127.0.0.1:3000/api/calc/installment \
-  -H 'Content-Type: application/json' \
-  -d '{ "amount": 10000, "interestRate": 13, "jobCategory": "civilian" }'
-```
+## ملاحظة
 
-يمكن ربط هذه المسارات من **Interakt Workflow / Zapier / Make** كخطوة «كوبري».
-
-## إعداد Interakt
-
-1. خطة **Advanced** على الأقل (لاستقبال webhooks للرسائل الواردة).
-2. Developer Settings → انسخ **API Key** وحدد **Webhook URL**:
-   `https://YOUR-DOMAIN/webhooks/interakt`
-3. ضع نفس **Secret Key** في `INTERAKT_WEBHOOK_SECRET`.
-4. أنشئ قالب واتساب معتمد:
-   - الاسم: `bot_reply` (أو قيمة `INTERAKT_REPLY_TEMPLATE`)
-   - اللغة: `ar`
-   - الفئة: Utility
-   - النص: `{{1}}`
-5. اربط رقم واتساب بيزنس بماجد في Interakt.
-
-> واجهة Interakt العامة ترسل **قوالب** فقط؛ لذلك الردود تمر عبر قالب `bot_reply` الذي يحمل نص الرد كاملاً في `{{1}}`.
-
-## النشر السحابي
-
-### Docker
-```bash
-docker build -t majed-bot .
-docker run -p 3000:3000 --env-file .env majed-bot
-```
-
-### Render
-- اربط المستودع؛ الملف `render.yaml` جاهز.
-- عيّن الأسرار: `INTERAKT_API_KEY`, `INTERAKT_WEBHOOK_SECRET`, `CALC_BRIDGE_API_KEY`.
-
-### Railway / أي Node host
-```bash
-npm run cloud
-```
-المتغير `PORT` يُقرأ تلقائياً.
-
-بعد النشر: حدّث Webhook URL في Interakt إلى نطاقك العام (HTTPS).
-
-## التشغيل القديم (واتساب ويب على جهازك)
-
-ما زال متاحاً للتطوير المحلي:
-
-```bash
-npm start          # أو start-majed.bat
-npm run admin
-```
-
-## الحساب
-
-| المعرّف | التسمية |
-|---------|---------|
-| `majed` | ماجد |
-
-## الأمان
-
-لا ترفع `.env` ولا جلسات واتساب ولا سجل العملاء. المستودع عام.
+خارج نافذة 24 ساعة Meta ترفض النص الحر وتلزم قالب — هذا البوت للمحادثة التفاعلية بعد رسالة العميل.

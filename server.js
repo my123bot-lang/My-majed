@@ -40,8 +40,9 @@ app.use(
   })
 );
 
-// كوبري الحسبة + Webhook Interakt (سحابي)
+// كوبري الحسبة + Webhooks (Meta Cloud API / Interakt اختياري)
 app.use("/api/calc", require("./routes/calc"));
+app.use("/webhooks/meta", require("./routes/meta-webhook"));
 app.use("/webhooks/interakt", require("./routes/interakt-webhook"));
 
 function extractToken(req) {
