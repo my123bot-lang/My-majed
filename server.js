@@ -40,8 +40,9 @@ app.use(
   })
 );
 
-// كوبري الحسبة + Webhooks (Meta Cloud API / Interakt اختياري)
+// API اختياري لمعادلات التمويل + Webhooks (Interakt / Meta)
 app.use("/api/calc", require("./routes/calc"));
+
 app.use("/webhooks/meta", require("./routes/meta-webhook"));
 app.use("/webhooks/interakt", require("./routes/interakt-webhook"));
 
