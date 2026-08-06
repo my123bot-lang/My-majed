@@ -1,0 +1,50 @@
+{
+  "updatedAt": "2026-06-08T04:44:16.478Z",
+  "accounts": {
+    "0488": {
+      "personalAgentName": "عبدالرحمن",
+      "personalAgentPhone": "0531240724",
+      "branchEmployeeName": "عبدالرحمن",
+      "branchEmployeePhone": "0531240724",
+      "propertyComboAgentName": "أبو تركي",
+      "propertyComboAgentPhone": "0566817985",
+      "propertyComboContactFooter": "من طرف رائد الحربي\nربي يسر أمرك",
+      "employeeName": "عبدالرحمن",
+      "employeePhone": "0531240724",
+      "portalUrl": "https://portal.sfco.com.sa/?DSA=SF1695",
+      "serviceStopAgentName": "أبو تركي",
+      "serviceStopAgentPhone": "0566817985",
+      "serviceStopContactHint": "من طرف رائد الحربي"
+    },
+    "wa_1780305984859": {
+      "personalAgentName": "عبدالرحمن",
+      "personalAgentPhone": "0531240724",
+      "branchEmployeeName": "عبدالرحمن",
+      "branchEmployeePhone": "0531240724",
+      "propertyComboAgentName": "أبو شايع",
+      "propertyComboAgentPhone": "0562393866",
+      "propertyComboContactFooter": "من طرف عبدالرحمن الرشيدي\nربي يسر أمرك",
+      "employeeName": "عبدالرحمن",
+      "employeePhone": "0531240724",
+      "portalUrl": "https://portal.sfco.com.sa/?DSA=SF1695",
+      "serviceStopAgentName": "أبو شايع",
+      "serviceStopAgentPhone": "0562393866",
+      "serviceStopContactHint": "من طرف عبدالرحمن الرشيدي"
+    },
+    "majed": {
+      "personalAgentName": "ماجد",
+      "personalAgentPhone": "0507009290",
+      "branchEmployeeName": "ماجد",
+      "branchEmployeePhone": "0507009290",
+      "propertyComboAgentName": "أبو تركي",
+      "propertyComboAgentPhone": "0506279834",
+      "propertyComboContactFooter": "من طرف ماجد\nربي يسر أمرك",
+      "employeeName": "ماجد",
+      "employeePhone": "0507009290",
+      "portalUrl": "https://portal.sfco.com.sa/?DSA=SF1888",
+      "serviceStopAgentName": "أبو تركي",
+      "serviceStopAgentPhone": "0506279834",
+      "serviceStopContactHint": "من طرف ماجد"
+    }
+  }
+}

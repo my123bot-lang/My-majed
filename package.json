@@ -1,0 +1,31 @@
+{
+  "name": "whatsapp_direct_bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "admin": "node server.js",
+    "admin:open": "node -e \"require('child_process').exec('start http://127.0.0.1:3000')\"",
+    "kill-port": "node scripts/kill-admin-port.js",
+    "kill-bot": "node scripts/kill-bot.js",
+    "reset-wa-session": "node scripts/reset-wa-session.js",
+    "unlock": "node scripts/unlock-session.js",
+    "set-active-wa": "node scripts/set-active-wa.js",
+    "start-dual": "node scripts/start-dual-bots.js",
+    "check-wa": "node scripts/check-wa-status.js",
+    "repair-wa-accounts": "node scripts/repair-wa-accounts.js",
+    "migrate-leads": "node scripts/migrate-leads-wa.js",
+    "restart": "node scripts/unlock-session.js && node bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.22.2",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}
