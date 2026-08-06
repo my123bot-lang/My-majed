@@ -1,31 +1,35 @@
-# بوت ماجد على واتساب (Interakt)
+# بوت ماجد على واتساب (Interakt) — سحابة دائمة
 
-العميل يفتح واتساب ويكتب مثلاً **`1`** → البوت يسأله **«أي قطاع؟»** → يكمل الحسبة خطوة بخطوة (راتب، عقاري، التزامات، عرض المبلغ…).
+العميل يفتح واتساب ويختار من الأزرار/القائمة → الحسبة الأصلية (`handlers` + `calculations`).
 
-نفس المنطق الأصلي: `handlers` + `config` + `calculations`.
+## رفع دائم على Render (موصى به)
 
-## التدفق
+1. ادخل [dashboard.render.com](https://dashboard.render.com) وسجّل بحساب GitHub
+2. **New** → **Blueprint** → اختر مستودع `My-majed`
+   - أو **Web Service** من الفرع `main` / `cursor/import-whatsapp-bot-66cf`
+3. الإعدادات:
+   - **Build:** `npm ci --omit=dev`
+   - **Start:** `node cloud.js`
+   - **Health Check:** `/api/health`
+   - **Plan:** `Starter` (لا تستخدم Free — ينام ويكسر الـ Webhook)
+4. Environment Variables:
+   - `CLOUD=1`
+   - `ADMIN_HOST=0.0.0.0`
+   - `INTERAKT_API_KEY` = مفتاحك من Interakt
+   - `INTERAKT_WEBHOOK_SECRET` = سر الـ Webhook
+   - `INTERAKT_SEND_MODE=auto`
+   - `INTERAKT_COUNTRY_CODE=+966`
+   - `INTERAKT_REPLY_TEMPLATE=bot_reply`
+   - `INTERAKT_REPLY_LANGUAGE=ar`
+5. بعد النشر انسخ الرابط مثل:
+   `https://majed-whatsapp-bot.onrender.com`
+6. في Interakt → Developer Settings → Webhook URL:
+   `https://YOUR-RENDER-URL/webhooks/interakt`
+   وفعّل **Message received from customers**
 
-```
-عميل يكتب 1
-  → Interakt
-  → POST /webhooks/interakt
-  → handlers (الحسبة الأصلية)
-  → رد نص حر على واتساب
-  → العميل
-```
+الملف الجاهز: `render.yaml`
 
-الإرسال: **نص حر** داخل نافذة 24 ساعة بعد رسالة العميل (`INTERAKT_SEND_MODE=auto`).  
-قالب `bot_reply` احتياطي فقط إذا انتهت النافذة.
-
-## إعداد Interakt
-
-1. API Key + Webhook Secret
-2. Webhook: `https://YOUR-DOMAIN/webhooks/interakt`
-3. فعّل **Message received from customers**
-4. (اختياري) اعتمد قالب `bot_reply` / `ar` نص `{{1}}.` للاحتياطي
-
-## تشغيل
+## تشغيل محلي / نفق مؤقت (للتطوير فقط)
 
 ```bash
 npm install
@@ -33,13 +37,9 @@ cp .env.example .env
 npm run cloud
 ```
 
-نفق مؤقت حالياً:
-- لوحة: https://romantic-medications-bargains-reward.trycloudflare.com/
-- Webhook: `https://romantic-medications-bargains-reward.trycloudflare.com/webhooks/interakt`
+النفق الحالي مؤقت ويتقفل مع انتهاء جلسة الوكيل.
 
-للرفع الدائم: Render (`render.yaml`) ثم حدّث Webhook.
-
-## محلي (واتساب ويب)
+## محلي واتساب ويب
 
 ```bash
 npm start
