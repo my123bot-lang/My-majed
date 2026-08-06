@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تحكم — ماجد</title>
+  <link rel="stylesheet" href="/admin.css?v=3" />
+</head>
+<body>
+
+<!-- فتح رابط بوابة خارجية -->
+  <div id="screenPortalWait" class="auth-screen hidden">
+    <div class="auth-card">
+      <h1>جاري فتح اللوحة…</h1>
+      <p class="muted" id="portalWaitHint">انتظر قليلاً</p>
+    </div>
+  </div>
+
+<!-- تسجيل الدخول -->
+  <div id="screenLogin" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="mark">م</div>
+        <div>
+          <strong style="font-size:1.1rem;">ماجد</strong>
+          <p class="muted" style="margin:4px 0 0;">لوحة تحكم البوت</p>
+        </div>
+      </div>
+      <h1>تسجيل الدخول</h1>
+      <p id="loginIntro">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+      <form id="loginForm">
+        <label for="loginUsername">اسم المستخدم</label>
+        <input type="text" id="loginUsername" required autocomplete="username" placeholder="admin" />
+        <label for="loginPassword">كلمة المرور</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password" />
+        <button type="submit" class="btn-primary" id="loginBtn">دخول</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- إعداد أول مدير -->
+  <div id="screenSetup" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="mark">م</div>
+        <div>
+          <strong style="font-size:1.1rem;">ماجد</strong>
+          <p class="muted" style="margin:4px 0 0;">إعداد أول مرة</p>
+        </div>
+      </div>
+      <h1>إعداد اللوحة</h1>
+      <p>أنشئ حساب المدير الأول للوحة التحكم</p>
+      <form id="setupForm">
+        <label for="setupUsername">اسم المستخدم</label>
+        <input type="text" id="setupUsername" value="admin" required />
+        <label for="setupDisplayName">الاسم المعروض</label>
+        <input type="text" id="setupDisplayName" placeholder="مدير النظام" />
+        <label for="setupPassword">كلمة المرور</label>
+        <input type="password" id="setupPassword" required minlength="6" />
+        <button type="submit" class="btn-primary" id="setupBtn">إنشاء والدخول</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- التطبيق الرئيسي -->
+  <div id="screenApp" class="app-layout hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">م</div>
+        <div>
+          <h2>ماجد</h2>
+          <span>لوحة واتساب</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button type="button" class="nav-item active" data-page="home" id="navHome"><span class="nav-icon">🏠</span><span>الرئيسية</span></button>
+        <button type="button" class="nav-item" data-page="stats" id="navStats"><span class="nav-icon">📊</span><span>الإحصائية</span></button>
+        <button type="button" class="nav-item" data-page="leads" id="navLeads"><span class="nav-icon">👥</span><span>سجل العملاء</span></button>
+        <button type="button" class="nav-item" data-page="settings" id="navSettings"><span class="nav-icon">📞</span><span>بيانات التواصل</span></button>
+        <button type="button" class="nav-item hidden" data-page="users" id="navUsers"><span class="nav-icon">🔐</span><span>المستخدمون</span></button>
+        <button type="button" class="nav-item hidden" data-page="whatsapp" id="navWhatsapp"><span class="nav-icon">📱</span><span>الجوالات</span></button>
+        <button type="button" class="nav-item" data-page="account"><span class="nav-icon">👤</span><span>حسابي</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <span id="userBadge">—</span>
+        <button type="button" id="logoutBtn">تسجيل الخروج</button>
+      </div>
+    </aside>
+
+    <div class="main-wrap">
+      <header class="app-topbar">
+        <div>
+          <p class="topbar-kicker">لوحة التحكم</p>
+          <h1 id="appTopbarTitle">الرئيسية</h1>
+        </div>
+      </header>
+      <main class="main">
+      <!-- الرئيسية -->
+      <section id="page-home" class="page active">
+        <div class="page-header">
+          <h1>الرئيسية</h1>
+          <p>ملخص سريع واختصارات</p>
+        </div>
+        <div class="card">
+          <h3>إحصائية اليوم — حسب الجوال</h3>
+          <div id="homeByWa" class="wa-account-cards"></div>
+          <div id="homeStats" style="margin-top:16px;">
+            <p class="section-title">المجموع (كل الجوالات)</p>
+            <div class="stats-grid" id="homeToday"></div>
+            <div id="homeSummary" class="muted" style="margin-top:14px;"></div>
+          </div>
+        </div>
+        <div class="card hidden" id="portalLinksCard">
+          <h3>روابط خارجية (للموظفين)</h3>
+          <p class="muted" style="margin:0 0 12px;font-size:0.88rem;">كل رابط يفتح لوحة مخصصة لجوال واحد فقط. لا تشارك الرابط إلا مع صاحبه.</p>
+          <div id="portalLinksList" class="portal-links-list"></div>
+        </div>
+        <div class="card">
+          <h3>اختصارات</h3>
+          <div class="quick-links">
+            <button type="button" class="quick-link" data-goto="stats">عرض الإحصائية الكاملة</button>
+            <button type="button" class="quick-link" data-goto="leads" data-wa="majed">عملاء ماجد</button>
+            <button type="button" class="quick-link" data-goto="settings" data-wa="majed">تواصل ماجد</button>
+            <button type="button" class="quick-link hidden" data-goto="whatsapp" id="homeLinkWhatsapp">الجوالات وربط واتساب</button>
+            <button type="button" class="quick-link hidden" id="homeBtnWaAddNew">إضافة مستخدم واتساب جديد</button>
+            <button type="button" class="quick-link" data-goto="users">إدارة المستخدمين</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>التشغيل</h3>
+          <p class="muted" style="margin:0;line-height:1.7;">
+            لوحة التحكم: <strong>start-admin.bat</strong><br />
+            البوت: <strong>start-bot.bat</strong><br />
+            من جهاز آخر: <code>http://IP-الجهاز:3000</code>
+          </p>
+        </div>
+      </section>
+
+      <!-- الإحصائية -->
+      <section id="page-stats" class="page">
+        <div class="page-header">
+          <h1>إحصائية المكالمات</h1>
+          <p>متابعة نتائج بوت ماجد</p>
+        </div>
+        <div class="wa-tabs" id="statsWaTabs"></div>
+        <p class="muted" id="statsWaTitle" style="margin:0 0 12px;font-weight:700;"></p>
+        <button type="button" class="btn-secondary" id="refreshStatsBtn">تحديث</button>
+        <p id="statsLoading" class="muted">جاري التحميل…</p>
+        <div id="statsContent" style="display:none;">
+          <p class="muted" id="statsUpdated"></p>
+          <div class="card">
+            <p class="section-title">اليوم</p>
+            <div class="stats-grid" id="todayGrid"></div>
+          </div>
+          <div class="card">
+            <p class="section-title">الإجمالي</p>
+            <div class="stats-grid" id="totalsGrid"></div>
+          </div>
+          <div class="card">
+            <p class="section-title">أنواع الاستفسار</p>
+            <ul class="inquiry-list" id="inquiryList"></ul>
+          </div>
+          <div class="card">
+            <p class="section-title">آخر 7 أيام</p>
+            <div class="table-wrap">
+              <table class="data-table stats-table">
+                <thead>
+                  <tr>
+                    <th>اليوم</th>
+                    <th>تواصل</th>
+                    <th>محادثات</th>
+                    <th>مؤهل</th>
+                    <th>نجاح</th>
+                    <th>رفض</th>
+                    <th>إلكتروني</th>
+                    <th>فرع</th>
+                  </tr>
+                </thead>
+                <tbody id="last7Body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- سجل العملاء -->
+      <section id="page-leads" class="page">
+        <div class="page-header">
+          <h1>سجل العملاء</h1>
+          <p>سجل عملاء بوت ماجد</p>
+        </div>
+        <div class="card">
+          <div class="card panel-accent hidden" id="leadsFollowUpCard">
+            <h3 style="margin:0 0 8px;font-size:1rem;">متابعة التقديم الإلكتروني</h3>
+            <p class="hint" style="margin:0 0 12px;">أرسل رسالة لكل عميل اختار «إلكتروني» — تُرسل عبر نافذة بوت ماجد. تأكد أن البوت شغّال.</p>
+            <label for="followUpMessage">نص الرسالة</label>
+            <textarea id="followUpMessage" rows="4" placeholder="السلام عليكم&#10;هل قدمت تمويل؟&#10;وكم رقم الطلب؟"></textarea>
+            <label style="display:flex;align-items:center;gap:8px;margin:12px 0 14px;font-weight:600;">
+              <input type="checkbox" id="followUpOnlyUnsent" checked />
+              فقط من لم تُرسل لهم رسالة متابعة سابقاً
+            </label>
+            <button type="button" class="btn-primary" id="sendFollowUpBtn">إرسال للإلكترونيين (حسب الفلتر والجوال)</button>
+            <p class="muted hidden" id="leadsFollowUpStatus" style="margin:12px 0 0;line-height:1.7;"></p>
+            <p class="hint" style="margin:10px 0 0;font-size:0.85rem;">
+              <strong>كيف تعرف حالة الإرسال؟</strong>
+              عمود «متابعة» في الجدول:
+              <span class="followup-status pending">⏳ في الطابور</span> =
+              بانتظار البوت ·
+              <span class="followup-status sent">✓ تم</span> =
+              وصلت للعميل ·
+              <span class="followup-status failed">✗ فشل</span> =
+              البوت غير شغّال أو رقم غير صالح
+            </p>
+          </div>
+          <div class="filter-bar">
+            <label for="leadsWaSelect" style="margin:0;">اسم المستخدم:</label>
+            <select id="leadsWaSelect" title="حساب ماجد أو الكل">
+              <option value="">الكل</option>
+            </select>
+            <label for="leadsFilter" style="margin:0;">الحالة:</label>
+            <select id="leadsFilter">
+              <option value="">الكل</option>
+              <option value="personal_finance">تمويل شخصي</option>
+              <option value="qualified">مؤهل (أخرى)</option>
+              <option value="combo_offer">مؤهل — أخذ عرض بديل</option>
+              <option value="rejected">مرفوض</option>
+              <option value="property">عقاري</option>
+              <option value="service_stop">إيقاف خدمات</option>
+            </select>
+            <label for="leadsAppFilter" style="margin:0;">التقديم:</label>
+            <select id="leadsAppFilter">
+              <option value="">الكل</option>
+              <option value="electronic">إلكتروني (رفع أونلاين)</option>
+              <option value="branch">زيارة الفرع</option>
+              <option value="combo">باقة (عقاري + شخصي)</option>
+            </select>
+            <label for="leadsMarkFilter" style="margin:0;">العلامة:</label>
+            <select id="leadsMarkFilter" title="فرز حسب لون العلامة اليدوية">
+              <option value="">الكل</option>
+              <option value="waiting">⏳ انتظار (برتقالي)</option>
+              <option value="reminder">★ تذكير (بنفسجي)</option>
+              <option value="done">✓ منفذ (أخضر)</option>
+              <option value="rejected">✕ مرفوض (أحمر)</option>
+              <option value="none">○ بدون علامة</option>
+            </select>
+            <button type="button" class="btn-secondary" id="refreshLeadsBtn" style="margin:0;">تحديث</button>
+          </div>
+          <div id="leadsSummary" class="leads-summary muted"></div>
+          <div class="leads-search-bar">
+            <div class="leads-search-group">
+              <label for="leadsPhoneSearch">بحث برقم الجوال</label>
+              <input
+                type="search"
+                id="leadsPhoneSearch"
+                placeholder="05xxxxxxxx أو آخر الأرقام"
+                dir="ltr"
+                autocomplete="off"
+              />
+              <button type="button" class="btn-secondary hidden" id="leadsPhoneSearchClear">مسح</button>
+            </div>
+            <div class="leads-search-group">
+              <label for="leadsOrderSearch">بحث برقم الطلب</label>
+              <input
+                type="search"
+                id="leadsOrderSearch"
+                placeholder="101… (كامل أو جزء)"
+                dir="ltr"
+                autocomplete="off"
+              />
+              <button type="button" class="btn-secondary hidden" id="leadsOrderSearchClear">مسح</button>
+            </div>
+            <button type="button" class="btn-primary" id="leadsSearchBtn">بحث</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>رقم العميل</th>
+                  <th>واتساب البوت</th>
+                  <th>الحالة</th>
+                  <th>التاريخ</th>
+                  <th>الاستفسار</th>
+                  <th>القطاع</th>
+                  <th>عقاري</th>
+                  <th>المبلغ</th>
+                  <th>التقديم</th>
+                  <th>رقم الطلب</th>
+                  <th>ملاحظة</th>
+                  <th>متابعة</th>
+                  <th>تواصل</th>
+                  <th>حذف</th>
+                </tr>
+              </thead>
+              <tbody id="leadsTableBody">
+                <tr><td colspan="14">جاري التحميل…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint" style="margin-top:12px;">
+            اضغط رقم العميل لفتح المحادثة في <strong>نافذة واتساب الرئيسية</strong> للبوت — الرد الآلي يبقى شغّالاً.
+            · أمام الرقم: <span class="lead-mark-dot reminder">★</span> تذكير · <span class="lead-mark-dot waiting">⏳</span> انتظار · <span class="lead-mark-dot done">✓</span> منفذ · <span class="lead-mark-dot rejected">✕</span> مرفوض · ○ بدون — يُلوَّن السطر كاملاً.
+            · عمود <strong>ملاحظة</strong> لحفظ حالة الطلب.
+          </p>
+        </div>
+        <div id="leadNoteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="leadNoteModalTitle">
+          <div class="modal-card">
+            <h3 id="leadNoteModalTitle" style="margin:0 0 8px;">ملاحظة — حالة الطلب</h3>
+            <p class="muted" id="leadNoteModalPhone" style="margin:0 0 12px;"></p>
+            <label for="leadNoteModalText" class="sr-only">نص الملاحظة</label>
+            <textarea id="leadNoteModalText" rows="7" maxlength="2000" placeholder="مثال: بانتظار الموافقة · تم الرفض · العميل لم يرد · راجع بعد أسبوع…"></textarea>
+            <p class="muted" id="leadNoteModalMeta" style="margin:8px 0 0;font-size:0.82rem;"></p>
+            <div class="modal-actions">
+              <button type="button" class="btn-primary" id="leadNoteModalSave">حفظ</button>
+              <button type="button" class="btn-secondary" id="leadNoteModalClear">مسح الملاحظة</button>
+              <button type="button" class="btn-secondary" id="leadNoteModalClose">إغلاق</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- الجوالات والإضافات -->
+      <section id="page-whatsapp" class="page">
+        <div class="page-header">
+          <h1>الجوالات والإضافات</h1>
+          <p>ربط أرقام واتساب بالبوت — إضافة مستخدم جديد ثم مسح QR في Chrome</p>
+        </div>
+
+        <div class="wa-action-bar">
+          <button type="button" class="btn-wa-primary" id="btnWaAddNew">+ إضافة مستخدم جديد</button>
+          <button type="button" class="btn-wa-secondary" id="btnWaGoQr">انتقل إلى الباركود (QR) في Chrome</button>
+        </div>
+
+        <div id="waAccountMismatch" class="wa-mismatch-banner hidden"></div>
+        <div id="waChromeBanner" class="wa-chrome-banner hidden">
+          <strong>الخطوة التالية:</strong> شغّل <code>start-bot.bat</code> أو <code>start-majed.bat</code>. امسح QR من Chrome أو من القسم أدناه.
+        </div>
+        <p class="hint" style="margin: -8px 0 16px;">
+          تشغيل ماجد: <code>start-majed.bat</code> أو <code>start-bot.bat</code>.
+        </p>
+
+        <div class="card wa-section-target" id="waQrSection">
+          <h3>الباركود (QR) — Chrome واللوحة</h3>
+          <p id="waStatusText" class="muted">جاري التحميل…</p>
+          <p id="waQrAccountLabel" class="muted" style="margin-top:6px;"></p>
+          <p id="waActivePhone" class="muted" style="margin-top:8px;"></p>
+          <div id="waQrBox" class="wa-qr-panel" style="display:none;">
+            <h4>امسح هذا الرمز من جوال واتساب</h4>
+            <p class="hint" style="margin-bottom:12px;">
+              من جوال الرقم: واتساب → الأجهزة المرتبطة → ربط جهاز → امسح الرمز أدناه<br />
+              أو من نافذة <strong>Chrome</strong> التي يفتحها البوت (لا تغلق Chrome)
+            </p>
+            <div style="text-align:center;">
+              <canvas id="waQrCanvas"></canvas>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:12px;">
+            بعد إضافة جوال: <code>start-bot-account.bat المعرف</code> أو <code>start-bot.bat</code>.
+          </p>
+          <button type="button" class="btn-secondary" id="waRefreshQr" style="margin-top:8px;">تحديث حالة QR</button>
+        </div>
+
+        <div class="card wa-section-target" id="waAddSection">
+          <h3>إضافة جوال / مستخدم واتساب جديد</h3>
+          <p class="hint">اسم للتمييز داخل اللوحة (مثال: مبيعات 2، فرع الرياض)</p>
+          <form id="addWaForm">
+            <div class="form-row">
+              <div>
+                <label for="waLabel">اسم الجوال في اللوحة</label>
+                <input type="text" id="waLabel" required placeholder="مثال: جوال المبيعات" />
+              </div>
+              <div>
+                <label for="waId">معرّف (اختياري — إنجليزي)</label>
+                <input type="text" id="waId" placeholder="sales2" />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top:12px;">إضافة ثم الانتقال إلى QR</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>دليل سريع</h3>
+          <ol class="steps-guide">
+            <li>اضغط <strong>إضافة مستخدم جديد</strong>، أدخل البيانات، ثم <strong>إضافة ثم الانتقال إلى QR</strong>.</li>
+            <li>شغّل <strong>start-bot.bat</strong> واضغط <strong>انتقل إلى الباركود (QR) في Chrome</strong>.</li>
+            <li>امسح QR من Chrome أو من القسم أعلاه.</li>
+            <li>بعد الربط تصبح الحالة <strong>متصل ويعمل</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h3>الجوالات المسجّلة</h3>
+          <p class="hint">البوت يعمل على <strong>جوال واحد نشط</strong> في كل مرة — فعّل الجوال المطلوب ثم أعد تشغيل البوت.</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>رقم واتساب المتصل</th>
+                  <th>المعرّف</th>
+                  <th>الحالة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="waAccountsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- الإعدادات -->
+      <section id="page-settings" class="page">
+        <div class="page-header">
+          <h1>بيانات التواصل والموظفين</h1>
+          <p>أسماء وأرقام التواصل التي تظهر للعميل حسب المسار</p>
+        </div>
+        <div class="wa-tabs" id="settingsWaTabs"></div>
+        <p class="muted" id="settingsWaHint" style="margin:0 0 16px;font-weight:700;"></p>
+        <form id="settingsForm">
+          <div class="card" id="settingsPersonal">
+            <h3>التمويل الشخصي</h3>
+            <p class="hint">التقديم الإلكتروني، شراء المديونية، وطلب التواصل في المسار الشخصي (بدون باقة عقارية)</p>
+            <div class="form-row">
+              <div>
+                <label for="personalAgentName">اسم الموظف المختص</label>
+                <input type="text" id="personalAgentName" required placeholder="مثال: ماجد" />
+              </div>
+              <div>
+                <label for="personalAgentPhone">رقم التواصل</label>
+                <input type="text" id="personalAgentPhone" required placeholder="0507009290" />
+              </div>
+            </div>
+            <div class="row-preview">
+              <a id="personalTelPreview" href="#">اتصال تجريبي — شخصي</a>
+            </div>
+            <label for="portalUrl">رابط التقديم الإلكتروني</label>
+            <input type="url" id="portalUrl" required placeholder="https://portal.sfco.com.sa/..." />
+            <div class="row-preview">
+              <a id="urlPreview" href="#" target="_blank" rel="noopener">فتح الرابط</a>
+            </div>
+          </div>
+          <div class="card" id="settingsBranch">
+            <h3>زيارة الفرع</h3>
+            <p class="hint">عند اختيار العميل «زيارة الفرع» بعد قبول عرض التمويل الشخصي</p>
+            <div class="form-row">
+              <div>
+                <label for="branchEmployeeName">اسم الموظف للتواصل</label>
+                <input type="text" id="branchEmployeeName" required placeholder="مثال: ماجد" />
+              </div>
+              <div>
+                <label for="branchEmployeePhone">رقم الموظف</label>
+                <input type="text" id="branchEmployeePhone" required placeholder="0507009290" />
+              </div>
+            </div>
+            <div class="row-preview">
+              <a id="branchTelPreview" href="#">اتصال تجريبي — فرع</a>
+            </div>
+          </div>
+          <div class="card" id="settingsPropertyCombo">
+            <h3>العرض العقاري + الشخصي (الباقة)</h3>
+            <p class="hint">عند تحويل العميل لباقة عقاري+شخصي — التقديم الإلكتروني أو طلب التواصل مع المندوب</p>
+            <div class="form-row">
+              <div>
+                <label for="propertyComboAgentName">اسم المندوب</label>
+                <input type="text" id="propertyComboAgentName" required placeholder="مثال: ماجد" />
+              </div>
+              <div>
+                <label for="propertyComboAgentPhone">رقم المندوب</label>
+                <input type="text" id="propertyComboAgentPhone" required placeholder="0507009290" />
+              </div>
+            </div>
+            <div class="row-preview">
+              <a id="propertyComboTelPreview" href="#">اتصال تجريبي — باقة</a>
+            </div>
+            <label for="propertyComboContactFooter">توقيع رسالة الباقة (يظهر أسفل رقم المندوب)</label>
+            <textarea id="propertyComboContactFooter" rows="2" required placeholder="من طرف ماجد&#10;ربي يسر أمرك"></textarea>
+          </div>
+          <div class="card">
+            <h3>إيقاف الخدمات — المندوب</h3>
+            <p class="hint">عند تأهيل العميل أو رغبته بالتواصل مع المندوب في مسار إيقاف الخدمات</p>
+            <label for="serviceStopAgentName">اسم المندوب / الموظف</label>
+            <input type="text" id="serviceStopAgentName" required placeholder="مثال: ماجد" />
+            <label for="serviceStopAgentPhone">رقم تواصل المندوب</label>
+            <input type="text" id="serviceStopAgentPhone" required placeholder="0507009290" />
+            <div class="row-preview">
+              <a id="serviceStopTelPreview" href="#">اتصال تجريبي</a>
+            </div>
+            <label for="serviceStopContactHint">نص يرسله العميل عند التواصل (واتساب)</label>
+            <input type="text" id="serviceStopContactHint" required placeholder="من طرف ماجد" />
+          </div>
+          <button type="submit" class="btn-primary" id="saveBtn">حفظ التغييرات</button>
+        </form>
+      </section>
+
+      <!-- المستخدمون -->
+      <section id="page-users" class="page">
+        <div class="page-header">
+          <h1>المستخدمون</h1>
+          <p>إضافة وتعديل صلاحيات لوحة التحكم</p>
+        </div>
+        <div class="wa-action-bar" style="margin-bottom:16px;">
+          <button type="button" class="btn-wa-primary" id="btnUsersAddNew">+ إضافة مستخدم جديد</button>
+        </div>
+        <div class="card wa-section-target" id="usersAddSection">
+          <h3>إضافة مستخدم</h3>
+          <form id="addUserForm">
+            <div class="form-row">
+              <div>
+                <label for="newUsername">اسم المستخدم</label>
+                <input type="text" id="newUsername" required placeholder="ahmed" />
+              </div>
+              <div>
+                <label for="newDisplayName">الاسم المعروض</label>
+                <input type="text" id="newDisplayName" placeholder="أحمد" />
+              </div>
+              <div>
+                <label for="newRole">الصلاحية</label>
+                <select id="newRole">
+                  <option value="viewer">عرض فقط</option>
+                  <option value="editor">محرر</option>
+                  <option value="admin">مدير</option>
+                </select>
+              </div>
+              <div>
+                <label for="newPassword">كلمة المرور</label>
+                <input type="password" id="newPassword" required minlength="6" />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top:14px;">إضافة مستخدم</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>قائمة المستخدمين</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>المستخدم</th>
+                  <th>الصلاحية</th>
+                  <th>نشط</th>
+                  <th>آخر دخول</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+          <p class="hint" style="margin-top:12px;">
+            اضغط <strong>إدارة</strong> لفتح صفحة التحكم الكاملة لكل مستخدم (صلاحيات، تفعيل، كلمة مرور).
+          </p>
+        </div>
+      </section>
+
+      <!-- صفحة مستخدم واحد -->
+      <section id="page-user-detail" class="page">
+        <div class="user-detail-head">
+          <button type="button" class="btn-back" id="btnUserDetailBack">← رجوع للقائمة</button>
+          <div>
+            <h1 id="userDetailTitle" style="margin:0;font-size:1.25rem;">مستخدم</h1>
+            <p id="userDetailSubtitle" class="muted" style="margin:4px 0 0;">—</p>
+          </div>
+        </div>
+
+        <form id="userDetailForm">
+          <input type="hidden" id="userDetailId" />
+          <div class="card">
+            <h3>البيانات الأساسية</h3>
+            <label for="userDetailDisplayName">الاسم المعروض</label>
+            <input type="text" id="userDetailDisplayName" required />
+            <label>اسم الدخول</label>
+            <input type="text" id="userDetailUsername" readonly disabled style="background:#f1f5f9;" />
+            <div class="form-row" style="margin-top:12px;">
+              <div>
+                <label for="userDetailRole">الدور الافتراضي</label>
+                <select id="userDetailRole">
+                  <option value="viewer">عرض فقط</option>
+                  <option value="editor">محرر</option>
+                  <option value="admin">مدير</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:flex-end;padding-bottom:14px;">
+                <label class="switch" style="margin:0;">
+                  <input type="checkbox" id="userDetailActive" />
+                  <span></span>
+                  <span style="margin-right:8px;font-weight:600;">الحساب نشط</span>
+                </label>
+              </div>
+            </div>
+            <p class="muted" id="userDetailMeta" style="font-size:0.85rem;margin-top:8px;"></p>
+          </div>
+
+          <div class="card">
+            <h3>صلاحيات اللوحة</h3>
+            <p class="hint">
+              اختر ما يظهر لهذا المستخدم. يمكنك تطبيق قالب دور ثم تخصيص الخانات.
+              <span id="userDetailCustomBadge" class="badge-custom-perms hidden">صلاحيات مخصصة</span>
+            </p>
+            <div class="role-preset-btns" id="userDetailRolePresets"></div>
+            <div class="perm-grid" id="userDetailPerms"></div>
+            <label class="switch">
+              <input type="checkbox" id="userDetailUseCustom" />
+              <span></span>
+              <span style="margin-right:8px;">حفظ كصلاحيات مخصصة (مختلفة عن الدور فقط)</span>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>كلمة المرور</h3>
+            <p class="hint">اتركها فارغة إن لم ترد تغييرها</p>
+            <label for="userDetailPassword">كلمة مرور جديدة</label>
+            <input type="password" id="userDetailPassword" minlength="6" autocomplete="new-password" />
+            <label for="userDetailPassword2">تأكيد كلمة المرور</label>
+            <input type="password" id="userDetailPassword2" minlength="6" autocomplete="new-password" />
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <button type="submit" class="btn-primary" id="userDetailSaveBtn">حفظ التغييرات</button>
+            <button type="button" class="btn-secondary danger" id="userDetailDeleteBtn">حذف المستخدم</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- حسابي -->
+      <section id="page-account" class="page">
+        <div class="page-header">
+          <h1>حسابي</h1>
+          <p>تغيير كلمة مرور الدخول</p>
+        </div>
+        <div class="card" style="max-width:400px;">
+          <form id="myPasswordForm">
+            <label for="myNewPassword">كلمة المرور الجديدة</label>
+            <input type="password" id="myNewPassword" required minlength="6" />
+            <label for="myNewPassword2">تأكيد كلمة المرور</label>
+            <input type="password" id="myNewPassword2" required minlength="6" />
+            <button type="submit" class="btn-primary">حفظ</button>
+          </form>
+        </div>
+      </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    document.querySelectorAll("[data-goto]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const page = el.dataset.goto;
+        document.querySelectorAll(".nav-item").forEach((n) => {
+          if (n.dataset.page === page) n.click();
+        });
+      });
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="/dashboard.js?v=25"></script>
+</body>
+</html>

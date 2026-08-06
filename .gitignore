@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# WhatsApp Web session (contains login cookies — never commit)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Runtime status / queues (regenerated while bot runs)
+data/bot-status*.json
+data/open-chat-queue*.json
+data/outbound-wa-queue.json
+data/call-stats.json
+
+# Optional local overrides of sensitive runtime data
+data/admin-users.json
+data/customer-leads.json
+data/portal-links.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
