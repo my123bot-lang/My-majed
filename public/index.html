@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>لوحة تحكم — رائد الحربي</title>
+  <title>لوحة تحكم — ماجد</title>
   <link rel="stylesheet" href="/admin.css?v=3" />
 </head>
 <body>
@@ -20,9 +20,9 @@
   <div id="screenLogin" class="auth-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="mark">RH</div>
+        <div class="mark">م</div>
         <div>
-          <strong style="font-size:1.1rem;">رائد الحربي</strong>
+          <strong style="font-size:1.1rem;">ماجد</strong>
           <p class="muted" style="margin:4px 0 0;">لوحة تحكم البوت</p>
         </div>
       </div>
@@ -42,9 +42,9 @@
   <div id="screenSetup" class="auth-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="mark">RH</div>
+        <div class="mark">م</div>
         <div>
-          <strong style="font-size:1.1rem;">رائد الحربي</strong>
+          <strong style="font-size:1.1rem;">ماجد</strong>
           <p class="muted" style="margin:4px 0 0;">إعداد أول مرة</p>
         </div>
       </div>
@@ -66,9 +66,9 @@
   <div id="screenApp" class="app-layout hidden">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark">RH</div>
+        <div class="brand-mark">م</div>
         <div>
-          <h2>رائد الحربي</h2>
+          <h2>ماجد</h2>
           <span>لوحة واتساب</span>
         </div>
       </div>
@@ -119,11 +119,7 @@
           <h3>اختصارات</h3>
           <div class="quick-links">
             <button type="button" class="quick-link" data-goto="stats">عرض الإحصائية الكاملة</button>
-            <button type="button" class="quick-link" data-goto="leads" data-wa="0488">عملاء رايد</button>
-            <button type="button" class="quick-link" data-goto="leads" data-wa="wa_1780305984859">عملاء عبدالرحمن</button>
             <button type="button" class="quick-link" data-goto="leads" data-wa="majed">عملاء ماجد</button>
-            <button type="button" class="quick-link" data-goto="settings" data-wa="0488">تواصل رايد</button>
-            <button type="button" class="quick-link" data-goto="settings" data-wa="wa_1780305984859">تواصل عبدالرحمن</button>
             <button type="button" class="quick-link" data-goto="settings" data-wa="majed">تواصل ماجد</button>
             <button type="button" class="quick-link hidden" data-goto="whatsapp" id="homeLinkWhatsapp">الجوالات وربط واتساب</button>
             <button type="button" class="quick-link hidden" id="homeBtnWaAddNew">إضافة مستخدم واتساب جديد</button>
@@ -144,7 +140,7 @@
       <section id="page-stats" class="page">
         <div class="page-header">
           <h1>إحصائية المكالمات</h1>
-          <p>متابعة النتائج — رايد وعبدالرحمن وماجد (جوال لكل بوت)</p>
+          <p>متابعة نتائج بوت ماجد</p>
         </div>
         <div class="wa-tabs" id="statsWaTabs"></div>
         <p class="muted" id="statsWaTitle" style="margin:0 0 12px;font-weight:700;"></p>
@@ -191,12 +187,12 @@
       <section id="page-leads" class="page">
         <div class="page-header">
           <h1>سجل العملاء</h1>
-          <p>سجل منفصل لكل جوال واتساب (رايد / عبدالرحمن)</p>
+          <p>سجل عملاء بوت ماجد</p>
         </div>
         <div class="card">
           <div class="card panel-accent hidden" id="leadsFollowUpCard">
             <h3 style="margin:0 0 8px;font-size:1rem;">متابعة التقديم الإلكتروني</h3>
-            <p class="hint" style="margin:0 0 12px;">أرسل رسالة لكل عميل اختار «إلكتروني» — تُرسل عبر نافذة البوت (رايد / عبدالرحمن / ماجد). تأكد أن البوت شغّال.</p>
+            <p class="hint" style="margin:0 0 12px;">أرسل رسالة لكل عميل اختار «إلكتروني» — تُرسل عبر نافذة بوت ماجد. تأكد أن البوت شغّال.</p>
             <label for="followUpMessage">نص الرسالة</label>
             <textarea id="followUpMessage" rows="4" placeholder="السلام عليكم&#10;هل قدمت تمويل؟&#10;وكم رقم الطلب؟"></textarea>
             <label style="display:flex;align-items:center;gap:8px;margin:12px 0 14px;font-weight:600;">
@@ -218,7 +214,7 @@
           </div>
           <div class="filter-bar">
             <label for="leadsWaSelect" style="margin:0;">اسم المستخدم:</label>
-            <select id="leadsWaSelect" title="اختر رايد / عبدالرحمن / ماجد أو الكل">
+            <select id="leadsWaSelect" title="حساب ماجد أو الكل">
               <option value="">الكل</option>
             </select>
             <label for="leadsFilter" style="margin:0;">الحالة:</label>
@@ -336,12 +332,10 @@
 
         <div id="waAccountMismatch" class="wa-mismatch-banner hidden"></div>
         <div id="waChromeBanner" class="wa-chrome-banner hidden">
-          <strong>الخطوة التالية:</strong> شغّل <code>start-bot.bat</code> (جوال واحد) أو
-          <code>start-both-whatsapp.bat</code> (عدة جوالات — نافذة لكل جوال). امسح QR من Chrome أو من القسم أدناه.
+          <strong>الخطوة التالية:</strong> شغّل <code>start-bot.bat</code> أو <code>start-majed.bat</code>. امسح QR من Chrome أو من القسم أدناه.
         </div>
         <p class="hint" style="margin: -8px 0 16px;">
-          <strong>تشغيل متعدد:</strong> <code>start-three-whatsapp.bat</code> رايد + عبدالرحمن + ماجد، أو
-          <code>start-both-whatsapp.bat</code> لجوّالين. جوال واحد: <code>start-bot-account.bat majed</code> مثلاً.
+          تشغيل ماجد: <code>start-majed.bat</code> أو <code>start-bot.bat</code>.
         </p>
 
         <div class="card wa-section-target" id="waQrSection">
@@ -360,7 +354,7 @@
             </div>
           </div>
           <p class="hint" style="margin-top:12px;">
-            بعد إضافة جوال: <code>start-bot-account.bat المعرف</code> أو <code>start-both-whatsapp.bat</code> لجميع الجوالات.
+            بعد إضافة جوال: <code>start-bot-account.bat المعرف</code> أو <code>start-bot.bat</code>.
           </p>
           <button type="button" class="btn-secondary" id="waRefreshQr" style="margin-top:8px;">تحديث حالة QR</button>
         </div>
@@ -417,7 +411,7 @@
       <section id="page-settings" class="page">
         <div class="page-header">
           <h1>بيانات التواصل والموظفين</h1>
-          <p>إعدادات منفصلة لكل جوال — رايد وعبدالرحمن وماجد — أسماء وأرقام تظهر للعميل حسب المسار</p>
+          <p>أسماء وأرقام التواصل التي تظهر للعميل حسب المسار</p>
         </div>
         <div class="wa-tabs" id="settingsWaTabs"></div>
         <p class="muted" id="settingsWaHint" style="margin:0 0 16px;font-weight:700;"></p>
@@ -478,7 +472,7 @@
               <a id="propertyComboTelPreview" href="#">اتصال تجريبي — باقة</a>
             </div>
             <label for="propertyComboContactFooter">توقيع رسالة الباقة (يظهر أسفل رقم المندوب)</label>
-            <textarea id="propertyComboContactFooter" rows="2" required placeholder="من طرف رائد الحربي&#10;ربي يسر أمرك"></textarea>
+            <textarea id="propertyComboContactFooter" rows="2" required placeholder="من طرف ماجد&#10;ربي يسر أمرك"></textarea>
           </div>
           <div class="card">
             <h3>إيقاف الخدمات — المندوب</h3>
@@ -491,7 +485,7 @@
               <a id="serviceStopTelPreview" href="#">اتصال تجريبي</a>
             </div>
             <label for="serviceStopContactHint">نص يرسله العميل عند التواصل (واتساب)</label>
-            <input type="text" id="serviceStopContactHint" required placeholder="من طرف رائد الحربي" />
+            <input type="text" id="serviceStopContactHint" required placeholder="من طرف ماجد" />
           </div>
           <button type="submit" class="btn-primary" id="saveBtn">حفظ التغييرات</button>
         </form>

@@ -12,7 +12,6 @@
     "reset-wa-session": "node scripts/reset-wa-session.js",
     "unlock": "node scripts/unlock-session.js",
     "set-active-wa": "node scripts/set-active-wa.js",
-    "start-dual": "node scripts/start-dual-bots.js",
     "check-wa": "node scripts/check-wa-status.js",
     "repair-wa-accounts": "node scripts/repair-wa-accounts.js",
     "migrate-leads": "node scripts/migrate-leads-wa.js",

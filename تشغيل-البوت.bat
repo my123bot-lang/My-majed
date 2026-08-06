@@ -10,9 +10,9 @@ taskkill /F /IM node.exe 2>nul
 timeout /t 2 /nobreak >nul
 call npm run unlock
 echo.
-echo Starting WhatsApp bot - do not close this window.
+echo Starting WhatsApp bot (Majed) - do not close this window.
 echo.
-call npm start
+call start-majed.bat
 echo.
 echo Bot stopped. Check messages above.
 pause

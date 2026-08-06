@@ -22,12 +22,11 @@ node scripts/unlock-session.js
 timeout /t 1 /nobreak >nul
 echo.
 echo ========================================
-echo   WhatsApp BOT - one phone (active in panel)
-echo   For TWO phones: start-both-whatsapp.bat
+echo   WhatsApp BOT - Majed
 echo   Chrome stays open for QR - do NOT close window
 echo ========================================
 echo.
-node bot.js
+node bot.js majed
 set EXITCODE=%ERRORLEVEL%
 echo.
 if %EXITCODE% NEQ 0 (

@@ -1,5 +1,5 @@
 /**
- * استعادة حسابات واتساب (رايد / عبدالرحمن / ماجد) إذا تلف whatsapp-accounts.json
+ * استعادة حساب واتساب ماجد إذا تلف whatsapp-accounts.json
  * npm run repair-wa-accounts
  */
 const waAccounts = require("../lib/whatsapp-accounts-store");

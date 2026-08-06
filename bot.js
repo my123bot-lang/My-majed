@@ -1,5 +1,5 @@
 /**
- * نقطة تشغيل بوت واتساب — رائد الحربي (تمويل)
+ * نقطة تشغيل بوت واتساب — ماجد (تمويل)
  *
  * تشغيل: npm start  أو  node bot.js
  */
@@ -53,10 +53,9 @@ console.log(
   `  موظف التمويل الشخصي: ${startupContacts.personalAgentName} — ${startupContacts.personalAgentPhone}`
 );
 if (process.env.WA_ACCOUNT_ID || process.argv[2]) {
-  console.log("  تشغيل مزدوج: نافذة منفصلة لكل جوال — start-both-whatsapp.bat");
+  console.log("  تشغيل بحساب محدد من سطر الأوامر");
 } else {
-  console.log("  جوال واحد: اللوحة → تفعيل → start-bot.bat");
-  console.log("  جوالان+: start-both-whatsapp.bat أو start-bot-account.bat ID");
+  console.log("  الحساب النشط: اللوحة → تفعيل → start-bot.bat أو start-majed.bat");
 }
 console.log("============================================");
 console.log("");

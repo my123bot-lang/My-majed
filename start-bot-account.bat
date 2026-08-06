@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 if "%~1"=="" (
   echo Usage: start-bot-account.bat ACCOUNT_ID
-  echo Example: start-bot-account.bat 0488
+  echo Example: start-bot-account.bat majed
   pause
   exit /b 1
 )

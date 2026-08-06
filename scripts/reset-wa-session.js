@@ -1,7 +1,7 @@
 /**
  * إعادة ضبط جلسة واتساب (عند خطأ Execution context was destroyed)
  * npm run reset-wa-session
- * npm run reset-wa-session -- 0488
+ * npm run reset-wa-session -- majed
  */
 const fs = require("fs");
 const path = require("path");

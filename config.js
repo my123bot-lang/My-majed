@@ -16,15 +16,15 @@ module.exports = {
   // عام
   // ---------------------------------------------------------------------------
   brand: {
-    name: "رائد الحربي",
-    contactPhone: "0501812339",
-    contactHint: "من طرف رائد الحربي",
+    name: "ماجد",
+    contactPhone: "0507009290",
+    contactHint: "من طرف ماجد",
     /** عدّل نصوص الخيارات 2 و 4 و 5 من هنا */
     debtPurchaseInfo: `لطلب شراء المديونية فضلاً تواصل معنا على الرقم:
-0501812339
+0507009290
 
 وأرسل:
-من طرف رائد الحربي — شراء مديونية`,
+من طرف ماجد — شراء مديونية`,
     workingHours: `ساعات ووقت الدوام الرسمي:
 
 من الأحد إلى الخميس
@@ -33,8 +33,8 @@ module.exports = {
 
 معرض السديري للسيارات
 
-للتواصل مع عبدالرحمن:
-0531240724`,
+للتواصل مع ماجد:
+0507009290`,
   },
 
   // ---------------------------------------------------------------------------
@@ -203,22 +203,22 @@ module.exports = {
     /** قسط التمويل العقاري القديم — يُخصم تلقائياً ولا يُطلب من العميل إدخاله */
     oldMortgageInstallment: 1667,
     portalUrl: "https://portal.sfco.com.sa/?DSA=SF1888",
-    employeeName: "عبدالرحمن",
+    employeeName: "ماجد",
     employeePhone: "0507009290",
     /** التمويل الشخصي — تقديم إلكتروني واستفسارات المسار الشخصي */
-    personalAgentName: "عبدالرحمن",
-    personalAgentPhone: "0531240724",
+    personalAgentName: "ماجد",
+    personalAgentPhone: "0507009290",
     /** زيارة الفرع — بعد اختيار التقديم بالفرع */
     branchEmployeeName: "ماجد",
     branchEmployeePhone: "0507009290",
     /** باقة عقاري + شخصي — عند قبول العرض والتواصل */
-    propertyComboAgentName: "أبو صالح",
-    propertyComboAgentPhone: "0501812339",
-    propertyComboContactFooter: "من طرف رائد الحربي\nربي يسر أمرك",
+    propertyComboAgentName: "أبو تركي",
+    propertyComboAgentPhone: "0506279834",
+    propertyComboContactFooter: "من طرف ماجد\nربي يسر أمرك",
     /** إيقاف الخدمات — المندوب عند رغبة العميل بالتواصل */
-    serviceStopAgentName: "أبو صالح",
-    serviceStopAgentPhone: "0501812339",
-    serviceStopContactHint: "من طرف رائد الحربي",
+    serviceStopAgentName: "أبو تركي",
+    serviceStopAgentPhone: "0506279834",
+    serviceStopContactHint: "من طرف ماجد",
   },
 
   // ---------------------------------------------------------------------------
@@ -310,7 +310,7 @@ module.exports = {
     nonText:
       "الرد على الأسئلة يكون بالكتابة (اكتب رقم الخيار أو نص الإجابة).",
 
-    start: `مرحبا معاك رائد الحربي.
+    start: `مرحبا معاك ماجد .
 
 مانوع استفسارك؟
 
@@ -319,8 +319,7 @@ module.exports = {
 3- عليك إيقاف خدمات وتبي الحل
 4- ساعات ووقت الدوام الرسمي
 5- موقعنا
-6- إيقاف الرد الآلي
-7- رقم المساعد`,
+6- إيقاف الرد الآلي`,
 
     pauseChatAutoReply: `تم إيقاف الرد الآلي على هذه المحادثة فقط.
 
@@ -335,8 +334,7 @@ module.exports = {
 3- عليك إيقاف خدمات وتبي الحل
 4- ساعات ووقت الدوام الرسمي
 5- موقعنا
-6- إيقاف الرد الآلي
-7- رقم المساعد`,
+6- إيقاف الرد الآلي`,
 
     inquiryMenuFooter: `
 
@@ -607,7 +605,7 @@ module.exports = {
       `رقم المساعد — ${name}:
 ${phone}
 
-رائد الحربي`,
+ماجد`,
 
     serviceStopWelcome: (
       totalFormatted,
@@ -711,7 +709,7 @@ ${employeePhone}
 ${portalUrl}`,
 
     electronicApplication: (portalUrl, employeeName, employeePhone, salesCode) => {
-      const code = String(salesCode || "SF1695").toLowerCase();
+      const code = String(salesCode || "SF1888").toLowerCase();
       return `تقديم إلكتروني
 
 رابط التقديم:
@@ -733,12 +731,12 @@ ${portalUrl}
 ${phone}
 
 شاكرين تواصلكم.
-رائد الحربي`,
+ماجد`,
 
     serviceStopAgentContact: (agentName, agentPhone, attribution) =>
       `للتواصل مع المندوب ${agentName}:
 ${agentPhone}
-${attribution || "من طرف رائد الحربي"}`,
+${attribution || "من طرف ماجد"}`,
 
     serviceStopDeclined: () => "تشرفنا بك وبالتوفيق",
 
@@ -757,7 +755,7 @@ ${attribution || "من طرف رائد الحربي"}`,
 2- لا`,
 
     applicationCompleteNoEmployee:
-      "شكراً لك. بالتوفيق في إجراءات التقديم.\n\nرائد الحربي",
+      "شكراً لك. بالتوفيق في إجراءات التقديم.\n\nماجد",
 
     propertySuccess: (phone, hint) =>
       `أنت مؤهل مبدئيًا للاستكمال.

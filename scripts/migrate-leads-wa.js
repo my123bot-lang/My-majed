@@ -1,5 +1,5 @@
 /**
- * ترحيل سجل العملاء — وسْم رايد + حالة عرض بديل
+ * ترحيل سجل العملاء — وسْم ماجد + حالة عرض بديل
  * npm run migrate-leads
  */
 const fs = require("fs");
@@ -9,7 +9,7 @@ const LEADS_PATH = path.join(__dirname, "..", "data", "customer-leads.json");
 const leads = require("../lib/customer-leads");
 const STATUS_LABELS = leads.STATUS_LABELS;
 
-const DEFAULT = { waAccountId: "0488", waAccountLabel: "رايد" };
+const DEFAULT = { waAccountId: "majed", waAccountLabel: "ماجد" };
 const CUTOFF = new Date("2026-06-02T08:00:00.000Z");
 
 function migrateRow(row) {

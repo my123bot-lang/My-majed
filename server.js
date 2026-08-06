@@ -274,7 +274,7 @@ app.get(
   requirePerm("settings:read"),
   portalAccess.enforceWaScope,
   (req, res) => {
-    const waAccountId = String(req.query.waAccountId || "0488").trim();
+    const waAccountId = String(req.query.waAccountId || "majed").trim();
     res.json({
       waAccountId,
       accounts: listSettingsAccounts(),
@@ -292,7 +292,7 @@ app.post(
   try {
     const body = req.body || {};
     const waAccountId = String(
-      body.waAccountId || req.query.waAccountId || "0488"
+      body.waAccountId || req.query.waAccountId || "majed"
     ).trim();
     const {
       password: _pw,
@@ -386,7 +386,7 @@ app.post(
       return res.status(400).json({
         ok: false,
         error:
-          "لم يُحدد جوال البوت — اختر تبويب رايد / عبدالرحمن / ماجد، أو سجّل العميل من نافذة البوت",
+          "لم يُحدد جوال البوت — اختر حساب ماجد، أو سجّل العميل من نافذة البوت",
       });
     }
     const result = await openWhatsAppChat(waAccountId, phone);
@@ -537,7 +537,7 @@ app.post(
         account,
         needsBotRestart: true,
         message:
-          `تم تفعيل ${account.label}. للتشغيل المزدوج: start-bot-account.bat ${account.id} أو start-both-whatsapp.bat — للجوال الواحد: start-bot.bat`,
+          `تم تفعيل ${account.label}. شغّل: start-bot.bat أو start-majed.bat`,
       });
     } catch (err) {
       res.status(400).json({ ok: false, error: err.message });

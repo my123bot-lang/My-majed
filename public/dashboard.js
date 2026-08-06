@@ -392,11 +392,9 @@
 
   let selectedStatsWa = "";
   let selectedLeadsWa = "";
-  let selectedSettingsWa = "0488";
+  let selectedSettingsWa = "majed";
 
   let WA_LEADS_TABS = [
-    { waAccountId: "0488", label: "رايد" },
-    { waAccountId: "wa_1780305984859", label: "عبدالرحمن" },
     { waAccountId: "majed", label: "ماجد" },
   ];
 
@@ -450,7 +448,7 @@
     ).join("");
     container.querySelectorAll(".wa-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
-        selectedSettingsWa = btn.dataset.wa || "0488";
+        selectedSettingsWa = btn.dataset.wa || "majed";
         initSettingsWaTabs();
         loadSettings();
       });
@@ -551,12 +549,12 @@
         });
         byWa.querySelectorAll(".wa-goto-leads").forEach((btn) => {
           btn.addEventListener("click", () => {
-            showPage("leads", { waAccountId: btn.dataset.wa || "0488" });
+            showPage("leads", { waAccountId: btn.dataset.wa || "majed" });
           });
         });
         byWa.querySelectorAll(".wa-goto-settings").forEach((btn) => {
           btn.addEventListener("click", () => {
-            showPage("settings", { waAccountId: btn.dataset.wa || "0488" });
+            showPage("settings", { waAccountId: btn.dataset.wa || "majed" });
           });
         });
       } else if (byWa) {
@@ -707,7 +705,7 @@
       const waLabel = link.dataset.waLabel || "";
       if (!waAccountId) {
         showToast(
-          "لم يُعرف جوال البوت — اختر تبويب رايد / عبدالرحمن / ماجد، أو تأكد أن العميل مسجّل من البوت",
+          "لم يُعرف جوال البوت — تأكد أن العميل مسجّل من بوت ماجد",
           false
         );
         return;
@@ -1394,7 +1392,7 @@
   let waPollTimer = null;
   let selectedWaAccountId = null;
   const WA_STATUS_LABELS = {
-    offline: "البوت غير شغّال — start-bot.bat أو start-both-whatsapp.bat",
+    offline: "البوت غير شغّال — start-bot.bat أو start-majed.bat",
     starting: "جاري التشغيل…",
     qr: "بانتظار مسح QR",
     ready: "متصل ويعمل",
@@ -1427,7 +1425,7 @@
       el.classList.remove("hidden");
       el.innerHTML =
         `<strong>يلزم تشغيل البوت</strong> لـ «${escapeHtml(cfgActive.label)}» (${escapeHtml(cfgActive.id)}). ` +
-        `<code>start-bot-account.bat ${escapeHtml(cfgActive.id)}</code> أو <code>start-both-whatsapp.bat</code>`;
+        `<code>start-bot.bat</code> أو <code>start-majed.bat</code>`;
       return;
     }
     if (alive && cfgActive && runningId && cfgActive.id !== runningId && running.length <= 1) {
@@ -1588,7 +1586,7 @@
             const label = btn.dataset.label || btn.dataset.id;
             const id = btn.dataset.id;
             showToast(
-              `تم تفعيل «${label}». شغّل start-bot-account.bat ${id} أو start-both-whatsapp.bat لتشغيل عدة جوالات.`,
+              `تم تفعيل «${label}». شغّل start-bot.bat أو start-majed.bat.`,
               true
             );
             showWaChromeBanner();

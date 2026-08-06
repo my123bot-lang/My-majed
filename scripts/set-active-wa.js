@@ -1,13 +1,13 @@
 /**
  * تفعيل حساب واتساب في اللوحة (قبل إعادة تشغيل البوت)
- * npm run set-active-wa -- 0488
+ * npm run set-active-wa -- majed
  */
 const { setActiveAccount, getActiveAccount } = require("../lib/whatsapp-accounts-store");
 
 const id = process.argv[2];
 if (!id) {
   console.error("الاستخدام: node scripts/set-active-wa.js <معرّف>");
-  console.error("مثال: node scripts/set-active-wa.js 0488");
+  console.error("مثال: node scripts/set-active-wa.js majed");
   process.exit(1);
 }
 
