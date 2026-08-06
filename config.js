@@ -749,6 +749,11 @@ ${portalUrl}
 رقم التواصل: ${employeePhone}`;
     },
 
+    /** رد اختيار «زيارة فرع» بعد عرض التمويل */
+    branchVisitInfo: () =>
+      `موقعنا معرض السديري للسيارات
+في حال حضورك اسأل عن الموظف ماجد`,
+
     employeeContact: (name, phone, contactLabel = "الموظف") =>
       `للتواصل مع ${contactLabel} ${name}:
 ${phone}
