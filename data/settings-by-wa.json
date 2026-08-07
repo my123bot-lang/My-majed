@@ -1,14 +1,15 @@
 {
-  "updatedAt": "2026-08-06T10:51:00.000Z",
+  "updatedAt": "2026-08-07T19:35:00.000Z",
   "accounts": {
     "majed": {
       "personalAgentName": "ماجد",
       "personalAgentPhone": "0507009290",
       "branchEmployeeName": "ماجد",
       "branchEmployeePhone": "0507009290",
-      "propertyComboAgentName": "أبو تركي",
+      "propertyComboAgentName": "المسؤول العقاري",
       "propertyComboAgentPhone": "0506279834",
-      "propertyComboContactFooter": "من طرف ماجد\nربي يسر أمرك",
+      "propertyComboAgentPhone2": "0546473109",
+      "propertyComboContactFooter": "من طرف ماجد\nبالتوفيق ربي ييسر أمرك",
       "employeeName": "ماجد",
       "employeePhone": "0507009290",
       "portalUrl": "https://portal.sfco.com.sa/?DSA=SF1888",

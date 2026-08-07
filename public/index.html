@@ -457,22 +457,24 @@
           </div>
           <div class="card" id="settingsPropertyCombo">
             <h3>العرض العقاري + الشخصي (الباقة)</h3>
-            <p class="hint">عند تحويل العميل لباقة عقاري+شخصي — التقديم الإلكتروني أو طلب التواصل مع المندوب</p>
+            <p class="hint">عند قبول العميل لباقة عقاري+شخصي (مستنفذ بدون عقاري) — أرقام المسؤول العقاري</p>
             <div class="form-row">
               <div>
-                <label for="propertyComboAgentName">اسم المندوب</label>
-                <input type="text" id="propertyComboAgentName" required placeholder="مثال: ماجد" />
+                <label for="propertyComboAgentName">المسمى / المسؤول</label>
+                <input type="text" id="propertyComboAgentName" required placeholder="المسؤول العقاري" />
               </div>
               <div>
-                <label for="propertyComboAgentPhone">رقم المندوب</label>
-                <input type="text" id="propertyComboAgentPhone" required placeholder="0507009290" />
+                <label for="propertyComboAgentPhone">رقم المسؤول 1</label>
+                <input type="text" id="propertyComboAgentPhone" required placeholder="0506279834" />
               </div>
             </div>
+            <label for="propertyComboAgentPhone2">رقم المسؤول 2</label>
+            <input type="text" id="propertyComboAgentPhone2" required placeholder="0546473109" />
             <div class="row-preview">
               <a id="propertyComboTelPreview" href="#">اتصال تجريبي — باقة</a>
             </div>
-            <label for="propertyComboContactFooter">توقيع رسالة الباقة (يظهر أسفل رقم المندوب)</label>
-            <textarea id="propertyComboContactFooter" rows="2" required placeholder="من طرف ماجد&#10;ربي يسر أمرك"></textarea>
+            <label for="propertyComboContactFooter">توقيع رسالة الباقة (يظهر أسفل الأرقام)</label>
+            <textarea id="propertyComboContactFooter" rows="2" required placeholder="من طرف ماجد&#10;بالتوفيق ربي ييسر أمرك"></textarea>
           </div>
           <div class="card">
             <h3>إيقاف الخدمات — المندوب</h3>

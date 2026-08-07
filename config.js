@@ -211,10 +211,12 @@ module.exports = {
     /** زيارة الفرع — بعد اختيار التقديم بالفرع */
     branchEmployeeName: "ماجد",
     branchEmployeePhone: "0507009290",
-    /** باقة عقاري + شخصي — عند قبول العرض والتواصل */
-    propertyComboAgentName: "أبو تركي",
+    /** باقة عقاري + شخصي — عند قبول العرض والتواصل (مستنفذ بدون عقاري) */
+    propertyComboAgentName: "المسؤول العقاري",
     propertyComboAgentPhone: "0506279834",
-    propertyComboContactFooter: "من طرف ماجد\nربي يسر أمرك",
+    propertyComboAgentPhone2: "0546473109",
+    propertyComboAgentPhones: ["0506279834", "0546473109"],
+    propertyComboContactFooter: "من طرف ماجد\nبالتوفيق ربي ييسر أمرك",
     /** أرقام مسار إيقاف الخدمات بعد قبول الباقة */
     serviceStopContactPhones: ["0506279834", "0546473109"],
     /** إيقاف الخدمات — المندوب عند رغبة العميل بالتواصل */
@@ -754,9 +756,10 @@ ${phone2}
 من طرف ماجد
 ربي يسر أمرك`,
 
-    propertyComboAgentDirect: (agentName, agentPhone, footer) =>
-      `للتواصل مع المندوب ${agentName}:
-${agentPhone}
+    propertyComboAgentDirect: (phone1, phone2, footer) =>
+      `للتواصل مع المسؤول العقاري:
+${phone1}
+${phone2}
 
 ${footer}`,
 
