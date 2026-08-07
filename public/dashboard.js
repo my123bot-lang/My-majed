@@ -1711,6 +1711,7 @@
     "branchEmployeePhone",
     "propertyComboAgentName",
     "propertyComboAgentPhone",
+    "propertyComboAgentPhone2",
     "propertyComboContactFooter",
     "portalUrl",
     "serviceStopAgentName",
