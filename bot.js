@@ -28,6 +28,9 @@ const {
 const { sendWhatsAppText } = require("./lib/send-wa-message");
 const customerLeads = require("./lib/customer-leads");
 const { shouldSkipInboundMessage } = require("./lib/inbound-filter");
+const {
+  tryHandleCustomerChatControl,
+} = require("./lib/customer-chat-control");
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -298,6 +301,43 @@ client.on("auth_failure", (message) => {
 });
 
 /**
+ * يجمع معرّفات العميل من رسالة المالك الصادرة (to / chat / رقم الجوال)
+ * حتى يعمل stop/start حتى لو تغيّر الشكل بين @c.us و @lid.
+ */
+async function resolveOwnerTargetKeys(msg) {
+  const keys = [];
+  const push = (value) => {
+    if (value) keys.push(String(value));
+  };
+
+  push(msg.to);
+  push(msg.from);
+
+  try {
+    const chat = await msg.getChat();
+    push(chat?.id?._serialized);
+    push(chat?.id?.user);
+    try {
+      const contact = await chat.getContact();
+      push(contact?.number);
+      push(contact?.id?._serialized);
+      push(contact?.id?.user);
+    } catch (_) {
+      /* ignore */
+    }
+  } catch (_) {
+    /* ignore */
+  }
+
+  const chatId =
+    keys.find((k) => String(k).includes("@c.us") || String(k).includes("@lid")) ||
+    msg.to ||
+    msg.from;
+
+  return { chatId, keys: [...new Set(keys.filter(Boolean))] };
+}
+
+/**
  * أوامر المالك stop / start (رسائلك الصادرة).
  * stop | start = هذا العميل فقط — stop all | start all = جميع العملاء
  */
@@ -308,18 +348,18 @@ async function handleOwnerMessage(msg) {
   const ownerCmd = autoReplyControl.parseOwnerCommand(msg.body);
   if (!ownerCmd) return false;
 
-  const chatId = msg.to || msg.from;
+  const { chatId, keys } = await resolveOwnerTargetKeys(msg);
 
   if (ownerCmd === "stop") {
-    autoReplyControl.pauseChat(chatId);
-    console.log("الرد الآلي موقوف لهذه المحادثة:", chatId);
+    autoReplyControl.pauseChat(chatId, { extraKeys: keys });
+    console.log("الرد الآلي موقوف لهذه المحادثة:", chatId, keys);
     await client.sendMessage(chatId, CONFIG.botControl.chatPausedReply);
     return true;
   }
 
   if (ownerCmd === "start") {
-    autoReplyControl.resumeChat(chatId);
-    console.log("الرد الآلي مستأنف لهذه المحادثة:", chatId);
+    autoReplyControl.resumeChat(chatId, { extraKeys: keys });
+    console.log("الرد الآلي مستأنف لهذه المحادثة:", chatId, keys);
     await client.sendMessage(chatId, CONFIG.botControl.chatResumedReply);
     return true;
   }
@@ -351,6 +391,9 @@ async function handleCustomerMessage(msg) {
     console.log("تجاهل رسالة (بدون رد):", from, "|", skip.reason, "|", preview);
     return;
   }
+
+  // stop/start من العميل — قبل فحص الإيقاف حتى يعمل start بعد stop
+  if (await tryHandleCustomerChatControl(msg)) return;
 
   if (!autoReplyControl.isEnabled()) {
     console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);

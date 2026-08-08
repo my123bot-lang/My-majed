@@ -14,24 +14,21 @@ const autoReplyControl = require("../lib/auto-reply-control");
 const sessionStore = require("../lib/session");
 const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
+const {
+  tryHandleCustomerChatControl,
+} = require("../lib/customer-chat-control");
 
 const router = express.Router();
 
 async function processInbound(inbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
 
-  if (!autoReplyControl.isEnabled()) {
-    console.log("[interakt] الرد الآلي متوقف عاماً");
-    return;
-  }
-
   const chatId = `${inbound.phone}@c.us`;
-  if (autoReplyControl.isChatPaused(chatId) || autoReplyControl.isChatPaused(inbound.phone)) {
-    console.log("[interakt] محادثة متوقفة:", inbound.phone);
-    return;
-  }
 
   if (!inbound.body) {
+    if (!autoReplyControl.isEnabled() || autoReplyControl.isChatPaused(chatId)) {
+      return;
+    }
     const msg = createInteraktMessage({
       phone: inbound.phone,
       body: "",
@@ -41,15 +38,32 @@ async function processInbound(inbound) {
     return;
   }
 
-  if (sessionStore.shouldThrottle(chatId, inbound.body)) {
-    return;
-  }
-
   const msg = createInteraktMessage({
     phone: inbound.phone,
     body: inbound.body,
     messageId: inbound.messageId,
   });
+
+  // stop/start من العميل قبل فحص الإيقاف العام/الخاص
+  try {
+    if (await tryHandleCustomerChatControl(msg)) return;
+  } catch (err) {
+    console.error("[interakt] خطأ أمر stop/start:", err);
+  }
+
+  if (!autoReplyControl.isEnabled()) {
+    console.log("[interakt] الرد الآلي متوقف عاماً");
+    return;
+  }
+
+  if (autoReplyControl.isChatPaused(chatId)) {
+    console.log("[interakt] محادثة متوقفة:", inbound.phone);
+    return;
+  }
+
+  if (sessionStore.shouldThrottle(chatId, inbound.body)) {
+    return;
+  }
 
   try {
     await handleIncomingMessage(msg);

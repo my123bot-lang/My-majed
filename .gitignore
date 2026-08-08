@@ -15,6 +15,7 @@ data/bot-status*.json
 data/open-chat-queue*.json
 data/outbound-wa-queue.json
 data/call-stats.json
+data/paused-chats*.json
 
 # Optional local overrides of sensitive runtime data
 data/admin-users.json
