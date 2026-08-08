@@ -10,10 +10,12 @@ const autoReplyControl = require("../lib/auto-reply-control");
 const sessionStore = require("../lib/session");
 const {
   tryHandleOwnerCommandByPhone,
+  tryHumanTakeoverByPhone,
   setPausedByPhone,
 } = require("../lib/owner-chat-control");
 const {
   parseOwnerOutboundCommand,
+  parseOwnerOutboundActivity,
   parseInboundMessage,
 } = require("../lib/interakt-webhook");
 const {
@@ -126,6 +128,50 @@ async function main() {
     parseInboundMessage(ownerPayload),
     null,
     "رسالة الوكيل لا تدخل مسار الحسبة"
+  );
+
+  // Interakt: رد يدوي طويل من الوكيل = إيقاف تلقائي لهذا العميل فقط
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  const agentReplyPayload = {
+    type: "message_received",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m1b",
+        chat_message_type: "AgentMessage",
+        message_content_type: "Text",
+        message:
+          "أهلاً بك، سأتابع طلبك شخصياً الآن وسأرجع لك خلال دقائق بالتفاصيل الكاملة بعد مراجعة الملف والراتب والالتزامات الحالية.",
+      },
+    },
+  };
+  const agentActivity = parseOwnerOutboundActivity(agentReplyPayload);
+  assert.ok(agentActivity, "يجب رصد نشاط الوكيل للرد اليدوي");
+  assert.strictEqual(
+    parseOwnerOutboundCommand(agentReplyPayload),
+    null,
+    "الرد الطويل ليس أمر stop/start"
+  );
+  const takeover = tryHumanTakeoverByPhone(phone, {
+    waAccountId: ACCOUNT,
+    reason: agentActivity.body,
+  });
+  assert.strictEqual(takeover.ok, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    true,
+    "الرد اليدوي من الوكيل يجب أن يوقف هذا العميل فقط"
+  );
+  const resumedAfterTakeover = await tryHandleOwnerCommandByPhone(
+    phone,
+    "start",
+    {}
+  );
+  assert.strictEqual(resumedAfterTakeover, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "start يجب أن يستأنف بعد الإيقاف التلقائي"
   );
 
   // Interakt: رسالة عميل عادية

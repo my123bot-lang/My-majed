@@ -8,7 +8,7 @@ const express = require("express");
 const {
   verifySignature,
   parseInboundMessage,
-  parseOwnerOutboundCommand,
+  parseOwnerOutboundActivity,
 } = require("../lib/interakt-webhook");
 const { createInteraktMessage } = require("../lib/interakt-adapter");
 const { handleIncomingMessage } = require("../lib/handlers");
@@ -23,6 +23,7 @@ const {
 } = require("../lib/customer-chat-control");
 const {
   tryHandleOwnerCommandByPhone,
+  tryHumanTakeoverByPhone,
 } = require("../lib/owner-chat-control");
 const {
   tryHandleOwnerRemoteControl,
@@ -36,23 +37,43 @@ const router = express.Router();
 async function processOwnerOutbound(outbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
 
-  const handled = await tryHandleOwnerCommandByPhone(outbound.phone, outbound.body, {
-    send: async (_chatId, text) => {
-      await sendWhatsAppTextViaInterakt(outbound.phone, text);
-    },
-  });
-
-  if (handled) {
-    console.log(
-      "[interakt] أمر مالك (صادر):",
+  const cmd = autoReplyControl.parseOwnerCommand(outbound.body);
+  if (cmd) {
+    const handled = await tryHandleOwnerCommandByPhone(
+      outbound.phone,
       outbound.body,
-      "→",
+      {
+        send: async (_chatId, text) => {
+          await sendWhatsAppTextViaInterakt(outbound.phone, text);
+        },
+      }
+    );
+
+    if (handled) {
+      console.log(
+        "[interakt] أمر مالك (صادر):",
+        outbound.body,
+        "→",
+        String(outbound.phone).slice(-4),
+        outbound.chatMessageType,
+        outbound.type
+      );
+    }
+    return handled;
+  }
+
+  // أي رد يدوي من الوكيل/المالك على هذا العميل = إيقاف الرد الآلي له فقط
+  const takeover = tryHumanTakeoverByPhone(outbound.phone, {
+    reason: outbound.body || (outbound.hasMedia ? "[media]" : ""),
+  });
+  if (takeover.ok && !takeover.alreadyPaused) {
+    console.log(
+      "[interakt] إيقاف تلقائي بعد رد يدوي →",
       String(outbound.phone).slice(-4),
-      outbound.chatMessageType,
-      outbound.type
+      outbound.chatMessageType
     );
   }
-  return handled;
+  return takeover.ok;
 }
 
 async function processInbound(inbound) {
@@ -182,20 +203,17 @@ router.post("/", (req, res) => {
     })
   );
 
-  // أوامر stop/start من رسالة صادرة — فقط إن أرسل Interakt الحدث أصلاً.
-  // ملاحظة: كتابة المالك من تطبيق واتساب الأعمال لا توثّقها Interakt كـ webhook
-  // (docs: message_received للعميل + message_api_* للقوالب فقط).
-  const ownerOutbound = parseOwnerOutboundCommand(payload);
+  // أوامر stop/start أو إيقاف تلقائي عند رد يدوي — إن أرسل Interakt الحدث.
+  // ملاحظة: كتابة المالك من تطبيق واتساب الأعمال غالباً لا تصل كـ webhook
+  // (docs: message_received للعميل + message_api_* للقوالب). صندوق Interakt قد يرسل AgentMessage.
+  const ownerOutbound = parseOwnerOutboundActivity(payload);
   if (ownerOutbound) {
-    const cmd = autoReplyControl.parseOwnerCommand(ownerOutbound.body);
-    if (cmd) {
-      setImmediate(() => {
-        processOwnerOutbound(ownerOutbound).catch((err) =>
-          console.error("[interakt] فشل أمر المالك:", err)
-        );
-      });
-      return;
-    }
+    setImmediate(() => {
+      processOwnerOutbound(ownerOutbound).catch((err) =>
+        console.error("[interakt] فشل معالجة صادر المالك:", err)
+      );
+    });
+    return;
   }
 
   if (payload.type === "message_received") {
