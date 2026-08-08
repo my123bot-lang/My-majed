@@ -26,7 +26,7 @@ async function processInbound(inbound) {
   }
 
   const chatId = `${inbound.phone}@c.us`;
-  if (autoReplyControl.isChatPaused(chatId) || autoReplyControl.isChatPaused(inbound.phone)) {
+  if (autoReplyControl.isChatPaused(chatId)) {
     console.log("[interakt] محادثة متوقفة:", inbound.phone);
     return;
   }
