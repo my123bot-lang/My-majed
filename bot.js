@@ -86,6 +86,12 @@ console.log(
 console.log(
   `مندوب إيقاف الخدمات (خيار 3): ${agentPreview.serviceStopAgentName} / ${agentPreview.serviceStopAgentPhone}`
 );
+try {
+  require("./lib/owner-remote-control").logOwnerControlBanner();
+  console.log("stop/start في شات العميل: مفعّل (وأي رد يدوي يوقف البوت لهذا العميل)");
+} catch (_) {
+  /* ignore */
+}
 
 const headlessEnv = process.env.PUPPETEER_HEADLESS;
 const puppeteerArgs = [...(CONFIG.puppeteer.args || [])];

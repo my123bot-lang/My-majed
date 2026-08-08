@@ -114,6 +114,12 @@ function attachUser(req, _res, next) {
 }
 
 app.get("/api/health", (_req, res) => {
+  let ownerControl = null;
+  try {
+    ownerControl = require("./lib/owner-remote-control").describeOwnerControl();
+  } catch (_) {
+    ownerControl = { enabled: false };
+  }
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
@@ -121,6 +127,8 @@ app.get("/api/health", (_req, res) => {
     gitBranch: process.env.RENDER_GIT_BRANCH || process.env.GIT_BRANCH || null,
     menuStartOnly: true,
     deployedAt: new Date().toISOString(),
+    ownerControl,
+    humanTakeoverOnReply: String(process.env.HUMAN_TAKEOVER_ON_REPLY || "1"),
   });
 });
 

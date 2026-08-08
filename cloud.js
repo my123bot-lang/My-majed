@@ -7,6 +7,7 @@ process.env.CLOUD = "1";
 
 const { startServer, PORT, HOST } = require("./server");
 const interakt = require("./lib/interakt-client");
+const { logOwnerControlBanner } = require("./lib/owner-remote-control");
 
 console.log("");
 console.log("============================================");
@@ -21,6 +22,7 @@ console.log(
     : "MISSING INTERAKT_API_KEY"
 );
 console.log("  Admin / portal: GET  /");
+logOwnerControlBanner(" ");
 console.log("============================================");
 console.log("");
 
