@@ -87,6 +87,21 @@ async function main() {
     "stop",
     "stop. يجب أن يُفهم"
   );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("إيقاف الرد الآلي"),
+    "stop",
+    "عنوان زر واتساب يجب أن يُفهم كـ stop"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("owner_pause_reply"),
+    "stop",
+    "معرف زر القائمة يجب أن يُفهم كـ stop"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("تشغيل الرد الآلي"),
+    "start",
+    "عنوان زر التشغيل يجب أن يُفهم كـ start"
+  );
 
   const handled = await tryHandleOwnerCommandByPhone(phone, "stop", {});
   assert.strictEqual(handled, true, "يجب معالجة stop");
@@ -262,6 +277,32 @@ async function main() {
     autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
     true,
     "Stop من رقم التحكم يجب أن يوقف آخر عميل نشط"
+  );
+
+  // ضغط زر القائمة من محادثة واتساب (عنوان الزر كما يصل من Interakt)
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  rememberActiveCustomer(phone);
+  const btnStop = await tryHandleOwnerRemoteControl(
+    ownerSelf,
+    "إيقاف الرد الآلي",
+    {}
+  );
+  assert.strictEqual(btnStop, true, "زر إيقاف الرد الآلي من واتساب يجب أن يُعالَج");
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    true,
+    "زر القائمة من محادثة واتساب يجب أن يوقف آخر عميل"
+  );
+  const btnStart = await tryHandleOwnerRemoteControl(
+    ownerSelf,
+    "تشغيل الرد الآلي",
+    {}
+  );
+  assert.strictEqual(btnStart, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "زر تشغيل الرد الآلي يجب أن يستأنف"
   );
   assert.strictEqual(
     await tryHandleOwnerRemoteControl(ownerSelf, "مرحبا"),
