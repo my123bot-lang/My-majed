@@ -275,14 +275,18 @@ async function main() {
     "قائمة العميل بلا زر إيقاف"
   );
   const ownerMenu = menus.inquiryMain({ ownerControls: true });
-  assert.ok(
-    ownerMenu.rows.some((r) => r.id === "owner_pause_reply"),
-    "قائمة المالك فيها إيقاف الرد الآلي"
+  assert.strictEqual(
+    ownerMenu.rows[0].id,
+    "owner_pause_reply",
+    "إيقاف الرد الآلي يجب أن يكون أول خيار للمالك"
   );
   assert.ok(
     ownerMenu.rows.some((r) => r.id === "owner_resume_reply"),
     "قائمة المالك فيها تشغيل الرد الآلي"
   );
+  const ownerBtns = menus.ownerAutoReplyControls();
+  assert.strictEqual(ownerBtns.kind, "buttons");
+  assert.strictEqual(ownerBtns.buttons.length, 2);
   assert.strictEqual(parseInquiryType("owner_pause_reply"), "pause_auto_reply");
   assert.strictEqual(parseInquiryType("owner_resume_reply"), "resume_auto_reply");
   delete process.env.OWNER_CONTROL_PHONES;
