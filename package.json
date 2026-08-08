@@ -19,7 +19,8 @@
     "migrate-leads": "node scripts/migrate-leads-wa.js",
     "restart": "node scripts/unlock-session.js && node bot.js majed",
     "test:calc": "node scripts/smoke-calc.js",
-    "test": "node scripts/smoke-calc.js"
+    "test:stop-start": "node scripts/smoke-stop-start.js",
+    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js"
   },
   "keywords": [],
   "author": "",

@@ -5,7 +5,11 @@
  * يجب الرد 200 خلال 3 ثوانٍ — لذلك نعالج المحادثة بشكل غير متزامن.
  */
 const express = require("express");
-const { verifySignature, parseInboundMessage } = require("../lib/interakt-webhook");
+const {
+  verifySignature,
+  parseInboundMessage,
+  parseOwnerOutboundCommand,
+} = require("../lib/interakt-webhook");
 const { createInteraktMessage } = require("../lib/interakt-adapter");
 const { handleIncomingMessage } = require("../lib/handlers");
 const { replyToMessage } = require("../lib/reply");
@@ -17,8 +21,33 @@ const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
   tryHandleCustomerChatControl,
 } = require("../lib/customer-chat-control");
+const {
+  tryHandleOwnerCommandByPhone,
+} = require("../lib/owner-chat-control");
+const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
 
 const router = express.Router();
+
+async function processOwnerOutbound(outbound) {
+  setCurrentWaAccountId(waAccounts.getActiveAccount().id);
+
+  const handled = await tryHandleOwnerCommandByPhone(outbound.phone, outbound.body, {
+    send: async (_chatId, text) => {
+      await sendWhatsAppTextViaInterakt(outbound.phone, text);
+    },
+  });
+
+  if (handled) {
+    console.log(
+      "[interakt] أمر مالك:",
+      outbound.body,
+      "→",
+      String(outbound.phone).slice(-4),
+      outbound.chatMessageType
+    );
+  }
+  return handled;
+}
 
 async function processInbound(inbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
@@ -26,7 +55,12 @@ async function processInbound(inbound) {
   const chatId = `${inbound.phone}@c.us`;
 
   if (!inbound.body) {
-    if (!autoReplyControl.isEnabled() || autoReplyControl.isChatPaused(chatId)) {
+    if (
+      !autoReplyControl.isEnabled() ||
+      autoReplyControl.isChatPausedForIdentity(chatId, {
+        extraKeys: [inbound.phone],
+      })
+    ) {
       return;
     }
     const msg = createInteraktMessage({
@@ -56,7 +90,11 @@ async function processInbound(inbound) {
     return;
   }
 
-  if (autoReplyControl.isChatPaused(chatId)) {
+  if (
+    autoReplyControl.isChatPausedForIdentity(chatId, {
+      extraKeys: [inbound.phone, msg._interaktPhone, msg._interaktDisplay],
+    })
+  ) {
     console.log("[interakt] محادثة متوقفة:", inbound.phone);
     return;
   }
@@ -98,9 +136,27 @@ router.post("/", (req, res) => {
 
   if (!payload || !payload.type) return;
 
+  // أوامر stop/start من رسالة صادرة (وكيل / واتساب الأعمال / API)
+  const ownerOutbound = parseOwnerOutboundCommand(payload);
+  if (ownerOutbound) {
+    const cmd = autoReplyControl.parseOwnerCommand(ownerOutbound.body);
+    if (cmd) {
+      setImmediate(() => {
+        processOwnerOutbound(ownerOutbound).catch((err) =>
+          console.error("[interakt] فشل أمر المالك:", err)
+        );
+      });
+      return;
+    }
+  }
+
   if (payload.type === "message_received") {
     const inbound = parseInboundMessage(payload);
     if (!inbound) {
+      // ربما رسالة وكيل بلا نص أمر — نتجاهل بهدوء
+      if (payload.data?.message?.chat_message_type !== "CustomerMessage") {
+        return;
+      }
       console.warn("[interakt] رسالة واردة بلا رقم");
       return;
     }

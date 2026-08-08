@@ -8,9 +8,10 @@ const {
   verifyChallenge,
   verifySignature,
   parseInboundMessages,
+  parseOwnerEchoMessages,
 } = require("../lib/meta-webhook");
 const { createMetaMessage } = require("../lib/meta-adapter");
-const { markAsRead, isConfigured } = require("../lib/meta-client");
+const { markAsRead, isConfigured, sendText } = require("../lib/meta-client");
 const { handleIncomingMessage } = require("../lib/handlers");
 const { replyToMessage } = require("../lib/reply");
 const messages = require("../lib/messages");
@@ -21,6 +22,9 @@ const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
   tryHandleCustomerChatControl,
 } = require("../lib/customer-chat-control");
+const {
+  tryHandleOwnerCommandByPhone,
+} = require("../lib/owner-chat-control");
 
 const router = express.Router();
 
@@ -34,7 +38,12 @@ async function processInbound(inbound) {
   }
 
   if (!inbound.body) {
-    if (!autoReplyControl.isEnabled() || autoReplyControl.isChatPaused(chatId)) {
+    if (
+      !autoReplyControl.isEnabled() ||
+      autoReplyControl.isChatPausedForIdentity(chatId, {
+        extraKeys: [inbound.phone],
+      })
+    ) {
       return;
     }
     const msg = createMetaMessage(inbound);
@@ -55,7 +64,11 @@ async function processInbound(inbound) {
     return;
   }
 
-  if (autoReplyControl.isChatPaused(chatId)) {
+  if (
+    autoReplyControl.isChatPausedForIdentity(chatId, {
+      extraKeys: [inbound.phone],
+    })
+  ) {
     console.log("[meta] محادثة متوقفة:", inbound.phone);
     return;
   }
@@ -106,16 +119,33 @@ router.post("/", (req, res) => {
   // Meta يتطلب 200 سريع
   res.status(200).json({ ok: true });
 
-  const inboundList = parseInboundMessages(payload);
-  if (!inboundList.length) return;
-
   if (!isConfigured()) {
-    console.error(
-      "[meta] وصول رسالة لكن META_WA_TOKEN / META_WA_PHONE_NUMBER_ID غير مضبوطين"
-    );
+    const hasTraffic =
+      parseInboundMessages(payload).length ||
+      parseOwnerEchoMessages(payload).length;
+    if (hasTraffic) {
+      console.error(
+        "[meta] وصول رسالة لكن META_WA_TOKEN / META_WA_PHONE_NUMBER_ID غير مضبوطين"
+      );
+    }
     return;
   }
 
+  const ownerEchoes = parseOwnerEchoMessages(payload);
+  for (const echo of ownerEchoes) {
+    if (!autoReplyControl.parseOwnerCommand(echo.body)) continue;
+    setImmediate(() => {
+      tryHandleOwnerCommandByPhone(echo.phone, echo.body, {
+        send: async (_chatId, text) => {
+          if (typeof sendText === "function") {
+            await sendText(echo.phone, text);
+          }
+        },
+      }).catch((err) => console.error("[meta] فشل أمر المالك:", err));
+    });
+  }
+
+  const inboundList = parseInboundMessages(payload);
   for (const inbound of inboundList) {
     setImmediate(() => {
       processInbound(inbound).catch((err) =>

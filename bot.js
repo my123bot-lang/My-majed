@@ -34,6 +34,7 @@ const {
 const {
   tryHandleOwnerChatControl,
 } = require("./lib/owner-chat-control");
+const { resolvePhoneFromMessage } = require("./lib/contact-phone");
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -332,7 +333,23 @@ async function handleCustomerMessage(msg) {
     return;
   }
 
-  if (autoReplyControl.isChatPaused(from)) {
+  // اربط @lid برقم الجوال قبل فحص الإيقاف حتى لا يفلت العميل الموقوف
+  let phoneHint = null;
+  try {
+    phoneHint = await resolvePhoneFromMessage(msg);
+  } catch (_) {
+    /* ignore */
+  }
+
+  if (
+    autoReplyControl.isChatPausedForIdentity(from, {
+      extraKeys: [
+        ...sessionStore.collectIdentityKeys(from),
+        phoneHint,
+        msg?.to,
+      ],
+    })
+  ) {
     console.log("رد آلي موقوف لهذه المحادثة — تجاهل:", from);
     return;
   }
