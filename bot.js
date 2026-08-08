@@ -29,9 +29,6 @@ const { sendWhatsAppText } = require("./lib/send-wa-message");
 const customerLeads = require("./lib/customer-leads");
 const { shouldSkipInboundMessage } = require("./lib/inbound-filter");
 const {
-  tryHandleCustomerChatControl,
-} = require("./lib/customer-chat-control");
-const {
   tryHandleOwnerChatControl,
 } = require("./lib/owner-chat-control");
 const { resolvePhoneFromMessage } = require("./lib/contact-phone");
@@ -337,8 +334,7 @@ async function handleCustomerMessage(msg) {
     return;
   }
 
-  // stop/start من العميل — قبل فحص الإيقاف حتى يعمل start بعد stop
-  if (await tryHandleCustomerChatControl(msg)) return;
+  // إيقاف/تشغيل الرد الآلي للمالك فقط — العميل لا يوقف البوت بـ stop/start
 
   if (!autoReplyControl.isEnabled()) {
     console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);

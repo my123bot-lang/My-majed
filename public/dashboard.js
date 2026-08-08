@@ -689,7 +689,7 @@
     showToast(
       res.message ||
         (res.autoReplyPaused
-          ? `تم فتح المحادثة وإيقاف الرد الآلي لهذا العميل — اضغط «تشغيل الرد» أو أرسل start للاستئناف`
+          ? `تم فتح المحادثة وإيقاف الرد الآلي لهذا العميل — اضغط «تشغيل الرد الآلي» في القائمة للاستئناف`
           : `تم فتح المحادثة في واتساب ${res.label || waLabel || waAccountId}`),
       true
     );
@@ -960,8 +960,8 @@
     const toggle =
       `<button type="button" class="btn-sm ${paused ? "btn-primary" : "btn-secondary"} lead-autoreply-btn" ` +
       `data-phone="${escapeHtml(row.phone || "")}" data-wa-id="${escapeHtml(waId)}" data-paused="${paused ? "1" : "0"}" ` +
-      `title="${paused ? "استئناف الرد الآلي (start)" : "إيقاف الرد الآلي (stop)"}">` +
-      `${paused ? "تشغيل الرد" : "إيقاف الرد"}</button>`;
+      `title="${paused ? "استئناف الرد الآلي — لك فقط" : "إيقاف الرد الآلي — لك فقط (ليس للعميل)"}">` +
+      `${paused ? "تشغيل الرد الآلي" : "إيقاف الرد الآلي"}</button>`;
     return `<div class="lead-phone-cell">${markHtml}${link} ${toggle}</div>`;
   }
 

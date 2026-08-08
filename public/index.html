@@ -297,8 +297,10 @@
             </table>
           </div>
           <p class="hint" style="margin-top:12px;">
-            اضغط رقم العميل لفتح المحادثة في واتساب — يُوقف الرد الآلي لهذا العميل تلقائياً.
-            على السحابة (Interakt): كتابة Stop داخل شات العميل من تطبيق الأعمال <strong>لا تصل</strong> للخادم؛ استخدم زر «إيقاف الرد» أو من جوالك الشخصي إلى رقم البوت: <code>stop 05xxxxxxxx</code>.
+            اضغط رقم العميل لفتح المحادثة — يُوقف الرد الآلي لهذا العميل تلقائياً.
+            زر <strong>إيقاف الرد الآلي</strong> أمام الرقم لك فقط (مو للعميل).
+            أرسل للعميل من <strong>صندوق Interakt</strong>: <code>stop</code> / <code>إيقاف</code> → يتوقف الرد الآلي لهذا العميل؛ <code>start</code> للاستئناف.
+            من تطبيق واتساب الأعمال فقط قد <strong>لا تصل</strong> الرسالة للخادم — فضّل صندوق Interakt أو زر الإيقاف هنا.
             · أمام الرقم: <span class="lead-mark-dot reminder">★</span> تذكير · <span class="lead-mark-dot waiting">⏳</span> انتظار · <span class="lead-mark-dot done">✓</span> منفذ · <span class="lead-mark-dot rejected">✕</span> مرفوض · ○ بدون — يُلوَّن السطر كاملاً.
             · عمود <strong>ملاحظة</strong> لحفظ حالة الطلب.
           </p>
@@ -493,14 +495,17 @@
           <div class="card" id="settingsOwnerControl">
             <h3>أرقام التحكم بإيقاف الرد الآلي</h3>
             <p class="hint">
-              الأرقام اللي تراسل منها بوت <strong>تمويلك سعودي</strong> (مثل رقم واتساب «ماجد للتمويل») حتى تظهر لك أزرار إيقاف/تشغيل الرد الآلي.
-              العميل العادي لا يرى هذه الأزرار. افصل بين الأرقام بفاصلة.
+              <strong>لا تضع رقم البوت</strong> (مثل 0507009290) ولا أرقام التواصل الظاهرة للعملاء.
+              لإيقاف الرد من <strong>تطبيق واتساب الأعمال</strong>: لازم Coexistence + اشتراك webhook
+              <code>smb_message_echoes</code> على
+              <code>https://YOUR-URL/webhooks/meta</code>
+              (انظر README). بعدها أرسل للعميل <code>stop</code> من التطبيق.
             </p>
-            <label for="ownerControlPhones">أرقام واتساب التحكم</label>
+            <label for="ownerControlPhones">جوال شخصي للتحكم (اختياري — غير رقم البوت)</label>
             <input
               type="text"
               id="ownerControlPhones"
-              placeholder="05xxxxxxxx, 05yyyyyyyy"
+              placeholder="05xxxxxxxx"
               dir="ltr"
               style="text-align:left;"
             />
