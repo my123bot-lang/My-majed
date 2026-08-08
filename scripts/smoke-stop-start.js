@@ -23,6 +23,9 @@ const {
   isOwnerControlPhone,
   tryHandleOwnerRemoteControl,
 } = require("../lib/owner-remote-control");
+const {
+  tryHandleCustomerChatControl,
+} = require("../lib/customer-chat-control");
 const { rememberActiveCustomer } = require("../lib/last-active-customer");
 
 const ACCOUNT = "smoke-stop-start";
@@ -265,6 +268,26 @@ async function main() {
     false,
     "رسائل غير أوامر من رقم التحكم تكمل كعميل"
   );
+
+  // العميل لا يستطيع إيقاف/تشغيل الرد الآلي بنص stop/start
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  const customerStopIgnored = await tryHandleCustomerChatControl({
+    from: chatId,
+    body: "stop",
+    _interaktPhone: phone,
+  });
+  assert.strictEqual(customerStopIgnored, false, "أمر العميل stop لا يُعالَج");
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "رسالة stop من العميل يجب ألا توقف الرد الآلي"
+  );
+  const customerStartIgnored = await tryHandleCustomerChatControl({
+    from: chatId,
+    body: "start",
+    _interaktPhone: phone,
+  });
+  assert.strictEqual(customerStartIgnored, false, "أمر العميل start لا يُعالَج");
 
   // قائمة المالك فقط تتضمن زر إيقاف/تشغيل الرد
   const menus = require("../lib/menus");

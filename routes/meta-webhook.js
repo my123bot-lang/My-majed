@@ -20,9 +20,6 @@ const sessionStore = require("../lib/session");
 const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
-  tryHandleCustomerChatControl,
-} = require("../lib/customer-chat-control");
-const {
   tryHandleOwnerCommandByPhone,
 } = require("../lib/owner-chat-control");
 const {
@@ -71,11 +68,7 @@ async function processInbound(inbound) {
 
   const msg = createMetaMessage(inbound);
 
-  try {
-    if (await tryHandleCustomerChatControl(msg)) return;
-  } catch (err) {
-    console.error("[meta] خطأ أمر stop/start:", err);
-  }
+  // العميل لا يوقف الرد الآلي — فقط المالك
 
   if (!autoReplyControl.isEnabled()) {
     console.log("[meta] الرد الآلي متوقف عاماً");

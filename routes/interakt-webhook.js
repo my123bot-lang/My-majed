@@ -19,9 +19,6 @@ const sessionStore = require("../lib/session");
 const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
-  tryHandleCustomerChatControl,
-} = require("../lib/customer-chat-control");
-const {
   tryHandleOwnerCommandByPhone,
   tryHumanTakeoverByPhone,
 } = require("../lib/owner-chat-control");
@@ -126,12 +123,7 @@ async function processInbound(inbound) {
     messageId: inbound.messageId,
   });
 
-  // stop/start من العميل قبل فحص الإيقاف العام/الخاص
-  try {
-    if (await tryHandleCustomerChatControl(msg)) return;
-  } catch (err) {
-    console.error("[interakt] خطأ أمر stop/start:", err);
-  }
+  // العميل لا يوقف الرد الآلي — فقط المالك (لوحة / قائمة / رقم تحكم / رد يدوي)
 
   if (!autoReplyControl.isEnabled()) {
     console.log("[interakt] الرد الآلي متوقف عاماً");
