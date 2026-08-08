@@ -242,6 +242,63 @@ async function main() {
     "قوالب message_api_sent ليست أوامر مالك"
   );
 
+  // إرسال stop للعميل عبر message_api_sent / PublicApiMessage (صندوق Interakt)
+  const apiStopPayload = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-stop-api",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "stop",
+        meta_data: {},
+      },
+    },
+  };
+  const apiStop = parseOwnerOutboundCommand(apiStopPayload);
+  assert.ok(apiStop, "stop الصادر للعميل عبر API يجب أن يُلتقط");
+  assert.strictEqual(apiStop.body, "stop");
+
+  const botEchoStop = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-bot-echo",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "stop",
+        meta_data: { callbackData: "bot_reply:t1" },
+      },
+    },
+  };
+  assert.strictEqual(
+    parseOwnerOutboundCommand(botEchoStop),
+    null,
+    "stop من رد البوت نفسه (callbackData=bot_*) يُتجاهل"
+  );
+
+  const arabicStopPayload = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-stop-ar",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "إيقاف",
+      },
+    },
+  };
+  assert.ok(
+    parseOwnerOutboundCommand(arabicStopPayload),
+    "إيقاف الصادر للعميل يجب أن يُلتقط"
+  );
+
   // أرقام المندوبين/البوت للتواصل مع العملاء ليست أرقام تحكم
   const prevOwnerEnv = process.env.OWNER_CONTROL_PHONES;
   delete process.env.OWNER_CONTROL_PHONES;
