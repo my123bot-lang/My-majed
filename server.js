@@ -24,6 +24,10 @@ const portalAccess = require("./lib/portal-access");
 const waAccounts = require("./lib/whatsapp-accounts-store");
 const botStatus = require("./lib/bot-status");
 const { collectShareableLanIps } = require("./lib/lan-host");
+const {
+  setPausedByPhone,
+  isPausedByPhone,
+} = require("./lib/owner-chat-control");
 
 const PORT = Number(process.env.PORT || process.env.ADMIN_PORT) || 3000;
 const HOST = process.env.ADMIN_HOST || "0.0.0.0";
@@ -367,18 +371,26 @@ app.get(
       orderNumberSearch,
       manualMark,
     } = req.query || {};
-    res.json(
-      getLeads({
-        status,
-        limit,
-        page,
-        waAccountId,
-        applicationMethod,
-        phoneSearch,
-        orderNumberSearch,
-        manualMark,
-      })
-    );
+    const payload = getLeads({
+      status,
+      limit,
+      page,
+      waAccountId,
+      applicationMethod,
+      phoneSearch,
+      orderNumberSearch,
+      manualMark,
+    });
+    if (Array.isArray(payload?.rows)) {
+      payload.rows = payload.rows.map((row) => ({
+        ...row,
+        autoReplyPaused: isPausedByPhone(
+          row.phone,
+          row.waAccountId || waAccountId || null
+        ),
+      }));
+    }
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message || "خطأ في سجل العملاء" });
   }
@@ -415,6 +427,64 @@ app.post(
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message || "تعذّر فتح المحادثة" });
   }
+  }
+);
+
+/**
+ * إيقاف / استئناف الرد الآلي لعميل واحد (بديل لأمر stop/start في المحادثة)
+ * body: { phone, paused: true|false, waAccountId? }
+ */
+app.post(
+  "/api/leads/auto-reply",
+  requireAuth,
+  requirePerm("stats:read"),
+  portalAccess.enforceWaScope,
+  (req, res) => {
+    try {
+      const phone = req.body?.phone;
+      if (!phone) {
+        return res.status(400).json({ ok: false, error: "رقم العميل مطلوب" });
+      }
+      const paused = Boolean(req.body?.paused);
+      const { waAccountId } = resolveWaAccountForOpenChat(phone, {
+        waAccountId: req.body?.waAccountId,
+        waAccountLabel: req.body?.waAccountLabel,
+      });
+      const result = setPausedByPhone(phone, paused, {
+        waAccountId: waAccountId || req.body?.waAccountId || undefined,
+      });
+      if (!result.ok) {
+        return res.status(400).json(result);
+      }
+      res.json({
+        ...result,
+        message: paused
+          ? "تم إيقاف الرد الآلي لهذا العميل"
+          : "تم استئناف الرد الآلي لهذا العميل",
+      });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message || "خطأ" });
+    }
+  }
+);
+
+app.get(
+  "/api/leads/auto-reply",
+  requireAuth,
+  requirePerm("stats:read"),
+  portalAccess.enforceWaScope,
+  (req, res) => {
+    try {
+      const phone = req.query?.phone;
+      if (!phone) {
+        return res.status(400).json({ ok: false, error: "رقم العميل مطلوب" });
+      }
+      const waAccountId = String(req.query?.waAccountId || "").trim() || null;
+      const paused = isPausedByPhone(phone, waAccountId);
+      res.json({ ok: true, phone, waAccountId, paused });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message || "خطأ" });
+    }
   }
 );
 
