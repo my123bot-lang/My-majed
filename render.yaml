@@ -27,3 +27,7 @@ services:
         sync: false
       - key: INTERAKT_WEBHOOK_SECRET
         sync: false
+      - key: OWNER_CONTROL_PHONES
+        sync: false
+      - key: HUMAN_TAKEOVER_ON_REPLY
+        value: "1"

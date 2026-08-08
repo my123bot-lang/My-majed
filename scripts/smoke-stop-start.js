@@ -19,7 +19,9 @@ const {
 const {
   parseOwnerRemoteCommand,
   isOwnerControlPhone,
+  tryHandleOwnerRemoteControl,
 } = require("../lib/owner-remote-control");
+const { rememberActiveCustomer } = require("../lib/last-active-customer");
 
 const ACCOUNT = "smoke-stop-start";
 const DATA_FILE = path.join(
@@ -164,11 +166,26 @@ async function main() {
   // أوامر المالك عن بُعد (المسار الموثوق على Interakt)
   process.env.OWNER_CONTROL_PHONES = "966509998887";
   assert.strictEqual(isOwnerControlPhone("0509998887"), true);
-  assert.strictEqual(isOwnerControlPhone("0501234567"), false);
+  assert.strictEqual(isOwnerControlPhone("0501111111"), false);
   const remote = parseOwnerRemoteCommand("stop 0501234567");
   assert.ok(remote);
   assert.strictEqual(remote.cmd, "stop");
   assert.strictEqual(remote.targetPhone, phone);
+
+  rememberActiveCustomer(phone);
+  const plainStop = parseOwnerRemoteCommand("stop");
+  assert.ok(plainStop);
+  assert.strictEqual(plainStop.cmd, "stop");
+  assert.strictEqual(plainStop.targetPhone, null);
+
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  const remotePlain = await tryHandleOwnerRemoteControl("966509998887", "stop", {});
+  assert.strictEqual(remotePlain, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    true,
+    "stop بدون رقم يجب أن يوقف آخر عميل نشط"
+  );
   delete process.env.OWNER_CONTROL_PHONES;
 
   cleanup();

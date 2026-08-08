@@ -29,6 +29,7 @@ const {
   isOwnerControlPhone,
 } = require("../lib/owner-remote-control");
 const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
+const { rememberActiveCustomer } = require("../lib/last-active-customer");
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ async function processInbound(inbound) {
       if (!handled) {
         await sendWhatsAppTextViaInterakt(
           inbound.phone,
-          "أوامر التحكم:\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all"
+          "أوامر التحكم (من جوالك إلى رقم البوت):\nstop\nstart\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all\n\nملاحظة: كتابة Stop داخل محادثة العميل لا تصل للخادم على Interakt."
         );
       }
     } catch (err) {
@@ -79,6 +80,8 @@ async function processInbound(inbound) {
     }
     return;
   }
+
+  rememberActiveCustomer(inbound.phone);
 
   if (!inbound.body) {
     if (

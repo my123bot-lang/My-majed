@@ -35,6 +35,8 @@ const {
   tryHandleOwnerChatControl,
 } = require("./lib/owner-chat-control");
 const { resolvePhoneFromMessage } = require("./lib/contact-phone");
+const { rememberActiveCustomer } = require("./lib/last-active-customer");
+const { markBotOutbound } = require("./lib/bot-outbound-guard");
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -310,7 +312,11 @@ client.on("auth_failure", (message) => {
  */
 async function handleOwnerMessage(msg) {
   return tryHandleOwnerChatControl(msg, {
-    send: (chatId, text) => client.sendMessage(chatId, text),
+    send: async (chatId, text) => {
+      const sent = await client.sendMessage(chatId, text);
+      markBotOutbound(sent, text);
+      return sent;
+    },
   });
 }
 
@@ -357,6 +363,12 @@ async function handleCustomerMessage(msg) {
   if (sessionStore.shouldThrottle(from, String(msg.body || ""))) {
     console.log("تجاهل رسالة سريعة من:", from);
     return;
+  }
+
+  try {
+    rememberActiveCustomer(phoneHint || from, from);
+  } catch (_) {
+    /* ignore */
   }
 
   callStats.recordInboundContact();
