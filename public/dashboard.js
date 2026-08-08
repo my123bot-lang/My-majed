@@ -687,9 +687,15 @@
       body: JSON.stringify({ phone, waAccountId, waAccountLabel: waLabel }),
     });
     showToast(
-      `تم فتح المحادثة في واتساب ${res.label || waLabel || waAccountId} — أرسل stop لإيقاف الرد الآلي لهذا العميل، و start لإرجاعه`,
+      res.message ||
+        (res.autoReplyPaused
+          ? `تم فتح المحادثة وإيقاف الرد الآلي لهذا العميل — اضغط «تشغيل الرد» أو أرسل start للاستئناف`
+          : `تم فتح المحادثة في واتساب ${res.label || waLabel || waAccountId}`),
       true
     );
+    if (res.autoReplyPaused) {
+      loadLeads().catch(() => {});
+    }
   }
 
   async function setLeadAutoReply(phone, waAccountId, paused) {

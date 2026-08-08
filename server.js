@@ -437,8 +437,38 @@ app.post(
           "لم يُحدد جوال البوت — اختر حساب ماجد، أو سجّل العميل من نافذة البوت",
       });
     }
-    const result = await openWhatsAppChat(waAccountId, phone);
-    res.json(result);
+    // أخذ المحادثة: أوقف الرد الآلي لهذا العميل أولاً (حتى لو فشل فتح المتصفح على السحابة)
+    let autoReplyPaused = false;
+    try {
+      const pauseResult = setPausedByPhone(phone, true, { waAccountId });
+      autoReplyPaused = Boolean(pauseResult?.ok && pauseResult?.paused);
+    } catch (pauseErr) {
+      console.warn("[open-chat] تعذّر إيقاف الرد الآلي:", pauseErr.message);
+    }
+
+    try {
+      const result = await openWhatsAppChat(waAccountId, phone);
+      res.json({
+        ...result,
+        autoReplyPaused,
+        message: autoReplyPaused
+          ? "تم فتح المحادثة وإيقاف الرد الآلي لهذا العميل. اضغط «تشغيل الرد» أو أرسل start للاستئناف."
+          : result?.message || "تم فتح المحادثة",
+      });
+    } catch (openErr) {
+      if (autoReplyPaused) {
+        return res.json({
+          ok: true,
+          opened: false,
+          autoReplyPaused: true,
+          phone,
+          waAccountId,
+          message:
+            "تم إيقاف الرد الآلي لهذا العميل. على السحابة افتح المحادثة من واتساب يدوياً — كتابة Stop من تطبيق الأعمال لا تصل للخادم.",
+        });
+      }
+      throw openErr;
+    }
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message || "تعذّر فتح المحادثة" });
   }

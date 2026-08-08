@@ -69,6 +69,21 @@ async function main() {
     "start",
     "START يجب أن يُفهم كأمر"
   );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("\u200fStop\u200f"),
+    "stop",
+    "Stop مع علامات اتجاه يجب أن يُفهم"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("/stop"),
+    "stop",
+    "/stop يجب أن يُفهم"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("stop."),
+    "stop",
+    "stop. يجب أن يُفهم"
+  );
 
   const handled = await tryHandleOwnerCommandByPhone(phone, "stop", {});
   assert.strictEqual(handled, true, "يجب معالجة stop");

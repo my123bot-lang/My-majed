@@ -93,7 +93,7 @@ async function processInbound(inbound) {
       if (!handled) {
         await sendWhatsAppTextViaInterakt(
           inbound.phone,
-          "أوامر التحكم (من جوالك إلى رقم البوت):\nstop\nstart\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all\n\nملاحظة: كتابة Stop داخل محادثة العميل لا تصل للخادم على Interakt."
+          "أوامر التحكم (من جوالك الشخصي إلى رقم البوت):\nstop ← يوقف آخر عميل راسل البوت\nstart ← يشغّله\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all / start all\n\n⚠️ كتابة Stop داخل محادثة العميل من تطبيق واتساب الأعمال لا تصل للخادم على Interakt — استخدم الأوامر هنا أو زر «إيقاف الرد» في اللوحة."
         );
       }
     } catch (err) {
