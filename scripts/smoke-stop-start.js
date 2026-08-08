@@ -242,7 +242,21 @@ async function main() {
     "قوالب message_api_sent ليست أوامر مالك"
   );
 
-  // أوامر المالك عن بُعد (المسار الموثوق على Interakt)
+  // أرقام المندوبين/البوت للتواصل مع العملاء ليست أرقام تحكم
+  const prevOwnerEnv = process.env.OWNER_CONTROL_PHONES;
+  delete process.env.OWNER_CONTROL_PHONES;
+  assert.strictEqual(
+    isOwnerControlPhone("0507009290"),
+    false,
+    "رقم البوت/التواصل 0507009290 يجب ألا يكون تحكم تلقائياً"
+  );
+  assert.strictEqual(
+    isOwnerControlPhone("0506279834"),
+    false,
+    "رقم عميل/تواصل 0506279834 يجب ألا يكون تحكم تلقائياً"
+  );
+
+  // أوامر المالك عن بُعد (جوال شخصي منفصل فقط)
   process.env.OWNER_CONTROL_PHONES = "966509998887";
   assert.strictEqual(isOwnerControlPhone("0509998887"), true);
   assert.strictEqual(isOwnerControlPhone("0501111111"), false);
@@ -353,7 +367,8 @@ async function main() {
   assert.strictEqual(ownerBtns.buttons.length, 2);
   assert.strictEqual(parseInquiryType("owner_pause_reply"), "pause_auto_reply");
   assert.strictEqual(parseInquiryType("owner_resume_reply"), "resume_auto_reply");
-  delete process.env.OWNER_CONTROL_PHONES;
+  if (prevOwnerEnv === undefined) delete process.env.OWNER_CONTROL_PHONES;
+  else process.env.OWNER_CONTROL_PHONES = prevOwnerEnv;
 
   cleanup();
   console.log("smoke-stop-start: OK");
