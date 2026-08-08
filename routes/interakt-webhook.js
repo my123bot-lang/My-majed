@@ -81,8 +81,8 @@ async function processInbound(inbound) {
 
   const chatId = `${inbound.phone}@c.us`;
 
-  // أوامر المالك من رقم شخصي → رقم البوت (المسار الموثوق على Interakt).
-  // أرقام التحكم لا تدخل حسبة التمويل أبداً.
+  // أوامر المالك من رقم شخصي → رقم البوت (stop/start فقط).
+  // باقي الرسائل من نفس الرقم تكمل كعميل عادي حتى يقدر يختبر البوت ويكتب Stop داخل المحادثة.
   if (inbound.body && isOwnerControlPhone(inbound.phone)) {
     try {
       const handled = await tryHandleOwnerRemoteControl(inbound.phone, inbound.body, {
@@ -90,16 +90,11 @@ async function processInbound(inbound) {
           await sendWhatsAppTextViaInterakt(inbound.phone, text);
         },
       });
-      if (!handled) {
-        await sendWhatsAppTextViaInterakt(
-          inbound.phone,
-          "أوامر التحكم (من جوالك الشخصي إلى رقم البوت):\nstop ← يوقف آخر عميل راسل البوت\nstart ← يشغّله\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all / start all\n\n⚠️ كتابة Stop داخل محادثة العميل من تطبيق واتساب الأعمال لا تصل للخادم على Interakt — استخدم الأوامر هنا أو زر «إيقاف الرد» في اللوحة."
-        );
-      }
+      if (handled) return;
     } catch (err) {
       console.error("[interakt] خطأ أمر مالك عن بُعد:", err);
+      return;
     }
-    return;
   }
 
   rememberActiveCustomer(inbound.phone);

@@ -247,6 +247,31 @@ async function main() {
     true,
     "stop بدون رقم يجب أن يوقف آخر عميل نشط"
   );
+
+  // رقم التحكم داخل جلسة عميل: Stop يوقف محادثته هو وليس عميلاً آخر
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  const ownerSelf = "966509998887";
+  sessionStore.startSession(`${ownerSelf}@c.us`);
+  rememberActiveCustomer(phone);
+  const selfStop = await tryHandleOwnerRemoteControl(ownerSelf, "Stop", {});
+  assert.strictEqual(selfStop, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(`${ownerSelf}@c.us`, {
+      extraKeys: [ownerSelf],
+    }),
+    true,
+    "Stop من رقم التحكم أثناء جلسته يجب أن يوقف محادثته"
+  );
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "Stop أثناء جلسة المالك لا يجب أن يوقف عميلاً آخر"
+  );
+  assert.strictEqual(
+    await tryHandleOwnerRemoteControl(ownerSelf, "مرحبا"),
+    false,
+    "رسائل غير أوامر من رقم التحكم تكمل كعميل"
+  );
   delete process.env.OWNER_CONTROL_PHONES;
 
   cleanup();

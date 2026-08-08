@@ -48,16 +48,11 @@ async function processInbound(inbound) {
           if (typeof sendText === "function") await sendText(inbound.phone, text);
         },
       });
-      if (!handled && typeof sendText === "function") {
-        await sendText(
-          inbound.phone,
-          "أوامر التحكم:\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all"
-        );
-      }
+      if (handled) return;
     } catch (err) {
       console.error("[meta] خطأ أمر مالك عن بُعد:", err);
+      return;
     }
-    return;
   }
 
   if (!inbound.body) {
@@ -156,15 +151,23 @@ router.post("/", (req, res) => {
 
   const ownerEchoes = parseOwnerEchoMessages(payload);
   for (const echo of ownerEchoes) {
-    if (!autoReplyControl.parseOwnerCommand(echo.body)) continue;
     setImmediate(() => {
-      tryHandleOwnerCommandByPhone(echo.phone, echo.body, {
-        send: async (_chatId, text) => {
-          if (typeof sendText === "function") {
-            await sendText(echo.phone, text);
-          }
-        },
-      }).catch((err) => console.error("[meta] فشل أمر المالك:", err));
+      (async () => {
+        const cmd = autoReplyControl.parseOwnerCommand(echo.body);
+        if (cmd) {
+          await tryHandleOwnerCommandByPhone(echo.phone, echo.body, {
+            send: async (_chatId, text) => {
+              if (typeof sendText === "function") {
+                await sendText(echo.phone, text);
+              }
+            },
+          });
+          return;
+        }
+        // أي رد يدوي من تطبيق الأعمال (echo) = إيقاف هذا العميل
+        const { tryHumanTakeoverByPhone } = require("../lib/owner-chat-control");
+        tryHumanTakeoverByPhone(echo.phone, { reason: echo.body });
+      })().catch((err) => console.error("[meta] فشل أمر/إيقاف المالك:", err));
     });
   }
 
