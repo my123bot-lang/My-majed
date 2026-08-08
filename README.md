@@ -47,7 +47,23 @@
 |---------|---------------------|-------|
 | محلي `npm start` | نعم من رقم البوت داخل شات العميل | نعم |
 | صندوق Interakt (ويب) | نعم — يصل كرسالة صادرة ويُوقف البوت | نعم |
-| تطبيق واتساب الأعمال فقط | غالباً **لا** يصل webhook | استخدم صندوق Interakt أو زر السجل |
+| تطبيق واتساب الأعمال | نعم بعد تفعيل **Coexistence + smb_message_echoes** أدناه | بعد الإعداد |
+
+### تفعيل stop من تطبيق واتساب الأعمال (نفس الرقم)
+
+Interakt وحده لا يرسل للخادم ما تكتبه من تطبيق الأعمال. الحل الرسمي من Meta:
+
+1. فعّل **WhatsApp Coexistence** في Interakt لنفس رقم العمل (رقم البوت = واتساب الأعمال)  
+   الدليل: [Interakt Coexistence](https://www.interakt.shop/resource-center/whatsapp-coexistence/)
+2. في Meta Developer → تطبيق WhatsApp → Webhooks:
+   - Callback URL: `https://YOUR-RENDER-URL/webhooks/meta`
+   - Verify token: قيمة `META_WA_VERIFY_TOKEN` (مثلاً `majed_verify`)
+   - اشترك في الحقل **`smb_message_echoes`**
+3. في Render أضف (إن لزم للتوقيع): `META_APP_SECRET` و`META_WA_VERIFY_TOKEN`
+4. افتح تطبيق الأعمال مرة كل 13 يوماً على الأقل (شرط Coexistence)
+5. اختبر: من التطبيق أرسل لعميل `stop` — يجب أن يتوقف الرد الآلي
+
+إذا تعذّر ربط `smb_message_echoes` (لأن Interakt يمتلك الـ WABA): استخدم صندوق Interakt أو زر سجل العملاء، أو اطلب من Interakt توجيه أصداء التطبيق إلى ويب هوكك.
 
 الملف الجاهز: `render.yaml`
 

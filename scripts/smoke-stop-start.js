@@ -18,6 +18,7 @@ const {
   parseOwnerOutboundActivity,
   parseInboundMessage,
 } = require("../lib/interakt-webhook");
+const { parseOwnerEchoMessages } = require("../lib/meta-webhook");
 const {
   parseOwnerRemoteCommand,
   isOwnerControlPhone,
@@ -298,6 +299,42 @@ async function main() {
     parseOwnerOutboundCommand(arabicStopPayload),
     "إيقاف الصادر للعميل يجب أن يُلتقط"
   );
+
+  // Meta smb_message_echoes — stop من تطبيق واتساب الأعمال
+  const echoPayload = {
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "WABA",
+        changes: [
+          {
+            field: "smb_message_echoes",
+            value: {
+              messaging_product: "whatsapp",
+              metadata: {
+                display_phone_number: "966507009290",
+                phone_number_id: "123",
+              },
+              message_echoes: [
+                {
+                  from: "966507009290",
+                  to: phone,
+                  id: "wamid.echo1",
+                  timestamp: "1710000000",
+                  type: "text",
+                  text: { body: "stop" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const echoes = parseOwnerEchoMessages(echoPayload);
+  assert.strictEqual(echoes.length, 1, "يجب استخراج echo واحد");
+  assert.strictEqual(echoes[0].body, "stop");
+  assert.strictEqual(echoes[0].phone, phone);
 
   // أرقام المندوبين/البوت للتواصل مع العملاء ليست أرقام تحكم
   const prevOwnerEnv = process.env.OWNER_CONTROL_PHONES;

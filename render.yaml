@@ -33,3 +33,7 @@ services:
         sync: false
       - key: HUMAN_TAKEOVER_ON_REPLY
         value: "1"
+      - key: META_WA_VERIFY_TOKEN
+        value: majed_verify
+      - key: META_APP_SECRET
+        sync: false

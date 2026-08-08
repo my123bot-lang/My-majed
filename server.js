@@ -120,6 +120,12 @@ app.get("/api/health", (_req, res) => {
   } catch (_) {
     ownerControl = { enabled: false };
   }
+  let metaWebhook = null;
+  try {
+    metaWebhook = require("./lib/meta-webhook").describeMetaWebhook();
+  } catch (_) {
+    metaWebhook = { sendConfigured: false };
+  }
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
@@ -128,6 +134,7 @@ app.get("/api/health", (_req, res) => {
     menuStartOnly: true,
     deployedAt: new Date().toISOString(),
     ownerControl,
+    metaWebhook,
     humanTakeoverOnReply: String(process.env.HUMAN_TAKEOVER_ON_REPLY || "1"),
   });
 });
@@ -348,6 +355,12 @@ app.get("/api/health", (_req, res) => {
   } catch (_) {
     ownerControl = { enabled: false };
   }
+  let metaWebhook = null;
+  try {
+    metaWebhook = require("./lib/meta-webhook").describeMetaWebhook();
+  } catch (_) {
+    metaWebhook = { sendConfigured: false };
+  }
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
@@ -355,6 +368,7 @@ app.get("/api/health", (_req, res) => {
     gitCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || null,
     gitBranch: process.env.RENDER_GIT_BRANCH || process.env.GIT_BRANCH || null,
     ownerControl,
+    metaWebhook,
   });
 });
 

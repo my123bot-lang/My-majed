@@ -1,7 +1,7 @@
 /**
  * Webhook Meta WhatsApp Cloud API
  * GET  /webhooks/meta  — تحقق الاشتراك (hub.verify_token)
- * POST /webhooks/meta  — رسائل واردة → بوت المحادثة → رد حر
+ * POST /webhooks/meta  — رسائل واردة + smb_message_echoes (تطبيق الأعمال)
  */
 const express = require("express");
 const {
@@ -21,6 +21,7 @@ const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
   tryHandleOwnerCommandByPhone,
+  tryHumanTakeoverByPhone,
 } = require("../lib/owner-chat-control");
 const {
   tryHandleOwnerRemoteControl,
@@ -29,20 +30,63 @@ const {
 
 const router = express.Router();
 
+async function ackToCustomer(phone, text) {
+  // فضّل Meta إن وُجد؛ وإلا Interakt (نفس رقم العمل على السحابة)
+  if (isConfigured() && typeof sendText === "function") {
+    try {
+      await sendText(phone, text);
+      return;
+    } catch (err) {
+      console.warn("[meta] فشل تأكيد عبر Meta، تجربة Interakt:", err.message);
+    }
+  }
+  try {
+    const { sendWhatsAppTextViaInterakt, isConfigured: interaktOk } = require("../lib/interakt-client");
+    if (interaktOk()) {
+      await sendWhatsAppTextViaInterakt(phone, text, "owner_ack");
+    }
+  } catch (err) {
+    console.warn("[meta] فشل تأكيد الإيقاف للعميل:", err.message);
+  }
+}
+
+async function processOwnerEcho(echo) {
+  setCurrentWaAccountId(waAccounts.getActiveAccount().id);
+
+  console.log(
+    "[meta] echo من تطبيق الأعمال →",
+    String(echo.phone).slice(-4),
+    String(echo.body || "").slice(0, 40)
+  );
+
+  const cmd = autoReplyControl.parseOwnerCommand(echo.body);
+  if (cmd) {
+    await tryHandleOwnerCommandByPhone(echo.phone, echo.body, {
+      send: async (_chatId, text) => {
+        await ackToCustomer(echo.phone, text);
+      },
+    });
+    return;
+  }
+
+  // أي رد يدوي من تطبيق الأعمال = إيقاف هذا العميل
+  tryHumanTakeoverByPhone(echo.phone, { reason: echo.body });
+}
+
 async function processInbound(inbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
 
   const chatId = `${inbound.phone}@c.us`;
 
-  if (inbound.messageId) {
-    await markAsRead(inbound.messageId);
+  if (inbound.messageId && isConfigured()) {
+    await markAsRead(inbound.messageId).catch(() => {});
   }
 
   if (inbound.body && isOwnerControlPhone(inbound.phone)) {
     try {
       const handled = await tryHandleOwnerRemoteControl(inbound.phone, inbound.body, {
         send: async (_chatId, text) => {
-          if (typeof sendText === "function") await sendText(inbound.phone, text);
+          await ackToCustomer(inbound.phone, text);
         },
       });
       if (handled) return;
@@ -61,14 +105,12 @@ async function processInbound(inbound) {
     ) {
       return;
     }
-    const msg = createMetaMessage(inbound);
-    await replyToMessage(msg, messages.nonTextMessage());
+    const emptyMsg = createMetaMessage(inbound);
+    await replyToMessage(emptyMsg, messages.nonTextMessage());
     return;
   }
 
   const msg = createMetaMessage(inbound);
-
-  // العميل لا يوقف الرد الآلي — فقط المالك
 
   if (!autoReplyControl.isEnabled()) {
     console.log("[meta] الرد الآلي متوقف عاماً");
@@ -96,7 +138,6 @@ async function processInbound(inbound) {
   }
 }
 
-/** تحقق Webhook عند ربطه في Meta Developer */
 router.get("/", (req, res) => {
   const challenge = verifyChallenge(req.query || {});
   if (challenge != null) {
@@ -130,41 +171,24 @@ router.post("/", (req, res) => {
   // Meta يتطلب 200 سريع
   res.status(200).json({ ok: true });
 
-  if (!isConfigured()) {
-    const hasTraffic =
-      parseInboundMessages(payload).length ||
-      parseOwnerEchoMessages(payload).length;
-    if (hasTraffic) {
-      console.error(
-        "[meta] وصول رسالة لكن META_WA_TOKEN / META_WA_PHONE_NUMBER_ID غير مضبوطين"
-      );
-    }
-    return;
-  }
-
+  // أولاً: أصداء تطبيق واتساب الأعمال — لا تحتاج إعداد إرسال Meta
   const ownerEchoes = parseOwnerEchoMessages(payload);
   for (const echo of ownerEchoes) {
     setImmediate(() => {
-      (async () => {
-        const cmd = autoReplyControl.parseOwnerCommand(echo.body);
-        if (cmd) {
-          await tryHandleOwnerCommandByPhone(echo.phone, echo.body, {
-            send: async (_chatId, text) => {
-              if (typeof sendText === "function") {
-                await sendText(echo.phone, text);
-              }
-            },
-          });
-          return;
-        }
-        // أي رد يدوي من تطبيق الأعمال (echo) = إيقاف هذا العميل
-        const { tryHumanTakeoverByPhone } = require("../lib/owner-chat-control");
-        tryHumanTakeoverByPhone(echo.phone, { reason: echo.body });
-      })().catch((err) => console.error("[meta] فشل أمر/إيقاف المالك:", err));
+      processOwnerEcho(echo).catch((err) =>
+        console.error("[meta] فشل أمر/إيقاف من تطبيق الأعمال:", err)
+      );
     });
   }
 
   const inboundList = parseInboundMessages(payload);
+  if (inboundList.length && !isConfigured()) {
+    console.error(
+      "[meta] رسالة واردة لكن META_WA_TOKEN / META_WA_PHONE_NUMBER_ID غير مضبوطين — تُتجاهل الواردات (أصداء stop تُعالج)"
+    );
+    return;
+  }
+
   for (const inbound of inboundList) {
     setImmediate(() => {
       processInbound(inbound).catch((err) =>
