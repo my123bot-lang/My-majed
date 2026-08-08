@@ -1756,6 +1756,7 @@
     "serviceStopAgentName",
     "serviceStopAgentPhone",
     "serviceStopContactHint",
+    "ownerControlPhones",
   ];
 
   function applySettingsToForm(data) {

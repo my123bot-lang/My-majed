@@ -490,6 +490,21 @@
             <label for="serviceStopContactHint">نص يرسله العميل عند التواصل (واتساب)</label>
             <input type="text" id="serviceStopContactHint" required placeholder="من طرف ماجد" />
           </div>
+          <div class="card" id="settingsOwnerControl">
+            <h3>أرقام التحكم بإيقاف الرد الآلي</h3>
+            <p class="hint">
+              الأرقام اللي تراسل منها بوت <strong>تمويلك سعودي</strong> (مثل رقم واتساب «ماجد للتمويل») حتى تظهر لك أزرار إيقاف/تشغيل الرد الآلي.
+              العميل العادي لا يرى هذه الأزرار. افصل بين الأرقام بفاصلة.
+            </p>
+            <label for="ownerControlPhones">أرقام واتساب التحكم</label>
+            <input
+              type="text"
+              id="ownerControlPhones"
+              placeholder="05xxxxxxxx, 05yyyyyyyy"
+              dir="ltr"
+              style="text-align:left;"
+            />
+          </div>
           <button type="submit" class="btn-primary" id="saveBtn">حفظ التغييرات</button>
         </form>
       </section>
