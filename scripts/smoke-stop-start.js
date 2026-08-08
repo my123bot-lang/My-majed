@@ -16,6 +16,10 @@ const {
   parseOwnerOutboundCommand,
   parseInboundMessage,
 } = require("../lib/interakt-webhook");
+const {
+  parseOwnerRemoteCommand,
+  isOwnerControlPhone,
+} = require("../lib/owner-remote-control");
 
 const ACCOUNT = "smoke-stop-start";
 const DATA_FILE = path.join(
@@ -137,6 +141,35 @@ async function main() {
   };
   assert.strictEqual(parseOwnerOutboundCommand(customerPayload), null);
   assert.strictEqual(parseInboundMessage(customerPayload)?.body, "4000");
+
+  // message_api_sent للقوالب يجب ألا يُفسَّر كأمر Stop
+  const templateSent = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        chat_message_type: "PublicApiMessage",
+        is_template_message: true,
+        message_content_type: "Template",
+        message: "stop",
+      },
+    },
+  };
+  assert.strictEqual(
+    parseOwnerOutboundCommand(templateSent),
+    null,
+    "قوالب message_api_sent ليست أوامر مالك"
+  );
+
+  // أوامر المالك عن بُعد (المسار الموثوق على Interakt)
+  process.env.OWNER_CONTROL_PHONES = "966509998887";
+  assert.strictEqual(isOwnerControlPhone("0509998887"), true);
+  assert.strictEqual(isOwnerControlPhone("0501234567"), false);
+  const remote = parseOwnerRemoteCommand("stop 0501234567");
+  assert.ok(remote);
+  assert.strictEqual(remote.cmd, "stop");
+  assert.strictEqual(remote.targetPhone, phone);
+  delete process.env.OWNER_CONTROL_PHONES;
 
   cleanup();
   console.log("smoke-stop-start: OK");

@@ -25,6 +25,10 @@ const {
 const {
   tryHandleOwnerCommandByPhone,
 } = require("../lib/owner-chat-control");
+const {
+  tryHandleOwnerRemoteControl,
+  isOwnerControlPhone,
+} = require("../lib/owner-remote-control");
 
 const router = express.Router();
 
@@ -35,6 +39,25 @@ async function processInbound(inbound) {
 
   if (inbound.messageId) {
     await markAsRead(inbound.messageId);
+  }
+
+  if (inbound.body && isOwnerControlPhone(inbound.phone)) {
+    try {
+      const handled = await tryHandleOwnerRemoteControl(inbound.phone, inbound.body, {
+        send: async (_chatId, text) => {
+          if (typeof sendText === "function") await sendText(inbound.phone, text);
+        },
+      });
+      if (!handled && typeof sendText === "function") {
+        await sendText(
+          inbound.phone,
+          "أوامر التحكم:\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all"
+        );
+      }
+    } catch (err) {
+      console.error("[meta] خطأ أمر مالك عن بُعد:", err);
+    }
+    return;
   }
 
   if (!inbound.body) {

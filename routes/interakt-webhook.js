@@ -24,6 +24,10 @@ const {
 const {
   tryHandleOwnerCommandByPhone,
 } = require("../lib/owner-chat-control");
+const {
+  tryHandleOwnerRemoteControl,
+  isOwnerControlPhone,
+} = require("../lib/owner-remote-control");
 const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
 
 const router = express.Router();
@@ -39,11 +43,12 @@ async function processOwnerOutbound(outbound) {
 
   if (handled) {
     console.log(
-      "[interakt] أمر مالك:",
+      "[interakt] أمر مالك (صادر):",
       outbound.body,
       "→",
       String(outbound.phone).slice(-4),
-      outbound.chatMessageType
+      outbound.chatMessageType,
+      outbound.type
     );
   }
   return handled;
@@ -53,6 +58,27 @@ async function processInbound(inbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
 
   const chatId = `${inbound.phone}@c.us`;
+
+  // أوامر المالك من رقم شخصي → رقم البوت (المسار الموثوق على Interakt).
+  // أرقام التحكم لا تدخل حسبة التمويل أبداً.
+  if (inbound.body && isOwnerControlPhone(inbound.phone)) {
+    try {
+      const handled = await tryHandleOwnerRemoteControl(inbound.phone, inbound.body, {
+        send: async (_chatId, text) => {
+          await sendWhatsAppTextViaInterakt(inbound.phone, text);
+        },
+      });
+      if (!handled) {
+        await sendWhatsAppTextViaInterakt(
+          inbound.phone,
+          "أوامر التحكم:\nstop 05xxxxxxxx\nstart 05xxxxxxxx\nstop all\nstart all"
+        );
+      }
+    } catch (err) {
+      console.error("[interakt] خطأ أمر مالك عن بُعد:", err);
+    }
+    return;
+  }
 
   if (!inbound.body) {
     if (
@@ -136,7 +162,26 @@ router.post("/", (req, res) => {
 
   if (!payload || !payload.type) return;
 
-  // أوامر stop/start من رسالة صادرة (وكيل / واتساب الأعمال / API)
+  const msgMeta = payload.data?.message || {};
+  console.log(
+    "[interakt] webhook:",
+    JSON.stringify({
+      type: payload.type,
+      chatMessageType: msgMeta.chat_message_type || null,
+      contentType: msgMeta.message_content_type || null,
+      isTemplate: Boolean(msgMeta.is_template_message),
+      bodyPreview: String(msgMeta.message || msgMeta.text || "").slice(0, 40),
+      phoneTail: String(
+        payload.data?.customer?.channel_phone_number ||
+          payload.data?.customer?.phone_number ||
+          ""
+      ).replace(/\D/g, "").slice(-4),
+    })
+  );
+
+  // أوامر stop/start من رسالة صادرة — فقط إن أرسل Interakt الحدث أصلاً.
+  // ملاحظة: كتابة المالك من تطبيق واتساب الأعمال لا توثّقها Interakt كـ webhook
+  // (docs: message_received للعميل + message_api_* للقوالب فقط).
   const ownerOutbound = parseOwnerOutboundCommand(payload);
   if (ownerOutbound) {
     const cmd = autoReplyControl.parseOwnerCommand(ownerOutbound.body);
@@ -155,6 +200,10 @@ router.post("/", (req, res) => {
     if (!inbound) {
       // ربما رسالة وكيل بلا نص أمر — نتجاهل بهدوء
       if (payload.data?.message?.chat_message_type !== "CustomerMessage") {
+        console.log(
+          "[interakt] message_received غير CustomerMessage — لا حسبة:",
+          payload.data?.message?.chat_message_type || "(فارغ)"
+        );
         return;
       }
       console.warn("[interakt] رسالة واردة بلا رقم");
@@ -199,9 +248,13 @@ router.post("/", (req, res) => {
     return;
   }
 
-  // حالات التسليم وغيرها — نسبرها فقط
+  // حالات التسليم وغيرها — لا تصل أوامر Stop من تطبيق الأعمال عبرها
   if (String(payload.type).startsWith("message_")) {
-    console.log("[interakt] حالة:", payload.type, payload.data?.message?.id || "");
+    console.log(
+      "[interakt] حالة (لا تُستخدم لأوامر Stop من التطبيق):",
+      payload.type,
+      msgMeta.id || ""
+    );
   }
 });
 

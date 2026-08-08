@@ -26,6 +26,21 @@
 6. في Interakt → Developer Settings → Webhook URL:
    `https://YOUR-RENDER-URL/webhooks/interakt`
    وفعّل **Message received from customers**
+7. (موصى به) أضف متغير `OWNER_CONTROL_PHONES` = رقم جوالك الشخصي (مثال `9665xxxxxxxx`)
+   لإيقاف/تشغيل عميل من السحابة أرسل من ذلك الجوال **إلى رقم البوت**:
+   - `stop 05xxxxxxxx`
+   - `start 05xxxxxxxx`
+   - أو من اللوحة: زر **إيقاف الرد / تشغيل الرد** بجانب رقم العميل
+
+### مهم: Stop من محادثة العميل على Interakt
+
+كتابة `Stop` داخل محادثة العميل من تطبيق واتساب الأعمال **لا تصل** لخادم Render.
+وثائق Interakt توصل فقط:
+- `message_received` = رسائل العميل الواردة
+- `message_api_*` = حالة قوالب الحملات/API
+
+لذلك مسار «اكتب stop في الشات» يعمل على **واتساب ويب المحلي** (`npm start`) فقط،
+أما الإنتاج على Interakt فاستخدم اللوحة أو `OWNER_CONTROL_PHONES`.
 
 الملف الجاهز: `render.yaml`
 
