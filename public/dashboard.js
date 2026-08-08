@@ -687,9 +687,16 @@
       body: JSON.stringify({ phone, waAccountId, waAccountLabel: waLabel }),
     });
     showToast(
-      `تم فتح المحادثة في واتساب ${res.label || waLabel || waAccountId} — الرد الآلي ما زال يعمل`,
+      `تم فتح المحادثة في واتساب ${res.label || waLabel || waAccountId} — أرسل stop لإيقاف الرد الآلي لهذا العميل، و start لإرجاعه`,
       true
     );
+  }
+
+  async function setLeadAutoReply(phone, waAccountId, paused) {
+    return api("/api/leads/auto-reply", {
+      method: "POST",
+      body: JSON.stringify({ phone, waAccountId, paused }),
+    });
   }
 
   function bindLeadsChatLinks() {
@@ -697,6 +704,26 @@
     if (!tbody || tbody.dataset.chatBound) return;
     tbody.dataset.chatBound = "1";
     tbody.addEventListener("click", async (e) => {
+      const autoBtn = e.target.closest(".lead-autoreply-btn");
+      if (autoBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = autoBtn.dataset.phone;
+        const waAccountId = autoBtn.dataset.waId || "";
+        const currentlyPaused = autoBtn.dataset.paused === "1";
+        if (!phone) return;
+        autoBtn.disabled = true;
+        try {
+          const res = await setLeadAutoReply(phone, waAccountId, !currentlyPaused);
+          showToast(res.message || (currentlyPaused ? "تم التشغيل" : "تم الإيقاف"), true);
+          await loadLeads();
+        } catch (err) {
+          showToast(err.message, false);
+          autoBtn.disabled = false;
+        }
+        return;
+      }
+
       const link = e.target.closest(".wa-chat-link");
       if (!link) return;
       e.preventDefault();
@@ -923,7 +950,13 @@
     const markHtml = leadManualMarkHtml(row);
     const link =
       `<a class="phone-link wa-chat-link" href="#" data-phone="${escapeHtml(row.phone)}" data-wa-id="${escapeHtml(waId)}" data-wa-label="${escapeHtml(row.waAccountLabel || "")}" title="فتح المحادثة في واتساب البوت — ${escapeHtml(row.waAccountLabel || "البوت")}">${escapeHtml(row.phone)}</a>`;
-    return `<div class="lead-phone-cell">${markHtml}${link}</div>`;
+    const paused = Boolean(row.autoReplyPaused);
+    const toggle =
+      `<button type="button" class="btn-sm ${paused ? "btn-primary" : "btn-secondary"} lead-autoreply-btn" ` +
+      `data-phone="${escapeHtml(row.phone || "")}" data-wa-id="${escapeHtml(waId)}" data-paused="${paused ? "1" : "0"}" ` +
+      `title="${paused ? "استئناف الرد الآلي (start)" : "إيقاف الرد الآلي (stop)"}">` +
+      `${paused ? "تشغيل الرد" : "إيقاف الرد"}</button>`;
+    return `<div class="lead-phone-cell">${markHtml}${link} ${toggle}</div>`;
   }
 
   function bindLeadManualMarkButtons() {

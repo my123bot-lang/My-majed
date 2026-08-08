@@ -31,6 +31,9 @@ const { shouldSkipInboundMessage } = require("./lib/inbound-filter");
 const {
   tryHandleCustomerChatControl,
 } = require("./lib/customer-chat-control");
+const {
+  tryHandleOwnerChatControl,
+} = require("./lib/owner-chat-control");
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -182,7 +185,7 @@ client.on("ready", async () => {
   } catch (_) {}
   startStatusHeartbeat();
   console.log(
-    `الرد الآلي: ${autoReplyControl.statusLabel()} — stop/start = هذا العميل فقط · stop all/start all = الكل`
+    `الرد الآلي: ${autoReplyControl.statusLabel()} — من محادثة العميل أرسل stop لإيقافه و start لإرجاعه (هذا العميل فقط) · stop all/start all = الكل`
   );
   startOutboundPoller();
   startOpenChatPoller();
@@ -301,84 +304,13 @@ client.on("auth_failure", (message) => {
 });
 
 /**
- * يجمع معرّفات العميل من رسالة المالك الصادرة (to / chat / رقم الجوال)
- * حتى يعمل stop/start حتى لو تغيّر الشكل بين @c.us و @lid.
- */
-async function resolveOwnerTargetKeys(msg) {
-  const keys = [];
-  const push = (value) => {
-    if (value) keys.push(String(value));
-  };
-
-  push(msg.to);
-  push(msg.from);
-
-  try {
-    const chat = await msg.getChat();
-    push(chat?.id?._serialized);
-    push(chat?.id?.user);
-    try {
-      const contact = await chat.getContact();
-      push(contact?.number);
-      push(contact?.id?._serialized);
-      push(contact?.id?.user);
-    } catch (_) {
-      /* ignore */
-    }
-  } catch (_) {
-    /* ignore */
-  }
-
-  const chatId =
-    keys.find((k) => String(k).includes("@c.us") || String(k).includes("@lid")) ||
-    msg.to ||
-    msg.from;
-
-  return { chatId, keys: [...new Set(keys.filter(Boolean))] };
-}
-
-/**
- * أوامر المالك stop / start (رسائلك الصادرة).
+ * أوامر المالك stop / start (رسائلك الصادرة داخل محادثة العميل).
  * stop | start = هذا العميل فقط — stop all | start all = جميع العملاء
  */
 async function handleOwnerMessage(msg) {
-  if (!msg.fromMe) return false;
-  if (autoReplyControl.rememberOwnerCommandMessage(msg)) return true;
-
-  const ownerCmd = autoReplyControl.parseOwnerCommand(msg.body);
-  if (!ownerCmd) return false;
-
-  const { chatId, keys } = await resolveOwnerTargetKeys(msg);
-
-  if (ownerCmd === "stop") {
-    autoReplyControl.pauseChat(chatId, { extraKeys: keys });
-    console.log("الرد الآلي موقوف لهذه المحادثة:", chatId, keys);
-    await client.sendMessage(chatId, CONFIG.botControl.chatPausedReply);
-    return true;
-  }
-
-  if (ownerCmd === "start") {
-    autoReplyControl.resumeChat(chatId, { extraKeys: keys });
-    console.log("الرد الآلي مستأنف لهذه المحادثة:", chatId, keys);
-    await client.sendMessage(chatId, CONFIG.botControl.chatResumedReply);
-    return true;
-  }
-
-  if (ownerCmd === "stop_all") {
-    autoReplyControl.disable();
-    console.log("الرد الآلي: متوقف بالكامل (أمر stop all من المالك)");
-    await client.sendMessage(chatId, CONFIG.botControl.pausedReply);
-    return true;
-  }
-
-  if (ownerCmd === "start_all") {
-    autoReplyControl.enable({ clearPausedChats: true });
-    console.log("الرد الآلي: يعمل — تم استئناف جميع المحادثات");
-    await client.sendMessage(chatId, CONFIG.botControl.resumedReply);
-    return true;
-  }
-
-  return false;
+  return tryHandleOwnerChatControl(msg, {
+    send: (chatId, text) => client.sendMessage(chatId, text),
+  });
 }
 
 async function handleCustomerMessage(msg) {
