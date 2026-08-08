@@ -97,7 +97,10 @@ async function processInbound(inbound) {
     }
   }
 
-  rememberActiveCustomer(inbound.phone);
+  // لا تُسجَّل أرقام التحكم كـ «آخر عميل» حتى يبقى Stop/زر القائمة موجّهاً للعملاء
+  if (!isOwnerControlPhone(inbound.phone)) {
+    rememberActiveCustomer(inbound.phone);
+  }
 
   if (!inbound.body) {
     if (

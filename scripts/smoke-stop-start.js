@@ -248,7 +248,7 @@ async function main() {
     "stop بدون رقم يجب أن يوقف آخر عميل نشط"
   );
 
-  // رقم التحكم داخل جلسة عميل: Stop يوقف محادثته هو وليس عميلاً آخر
+  // رقم التحكم + عميل نشط: Stop يوقف العميل النشط (مو جلسة المالك)
   autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
   const ownerSelf = "966509998887";
   sessionStore.startSession(`${ownerSelf}@c.us`);
@@ -256,22 +256,35 @@ async function main() {
   const selfStop = await tryHandleOwnerRemoteControl(ownerSelf, "Stop", {});
   assert.strictEqual(selfStop, true);
   assert.strictEqual(
-    autoReplyControl.isChatPausedForIdentity(`${ownerSelf}@c.us`, {
-      extraKeys: [ownerSelf],
-    }),
-    true,
-    "Stop من رقم التحكم أثناء جلسته يجب أن يوقف محادثته"
-  );
-  assert.strictEqual(
     autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
-    false,
-    "Stop أثناء جلسة المالك لا يجب أن يوقف عميلاً آخر"
+    true,
+    "Stop من رقم التحكم يجب أن يوقف آخر عميل نشط"
   );
   assert.strictEqual(
     await tryHandleOwnerRemoteControl(ownerSelf, "مرحبا"),
     false,
     "رسائل غير أوامر من رقم التحكم تكمل كعميل"
   );
+
+  // قائمة المالك فقط تتضمن زر إيقاف/تشغيل الرد
+  const menus = require("../lib/menus");
+  const { parseInquiryType } = require("../lib/validators");
+  assert.strictEqual(
+    menus.inquiryMain().rows.some((r) => r.id === "owner_pause_reply"),
+    false,
+    "قائمة العميل بلا زر إيقاف"
+  );
+  const ownerMenu = menus.inquiryMain({ ownerControls: true });
+  assert.ok(
+    ownerMenu.rows.some((r) => r.id === "owner_pause_reply"),
+    "قائمة المالك فيها إيقاف الرد الآلي"
+  );
+  assert.ok(
+    ownerMenu.rows.some((r) => r.id === "owner_resume_reply"),
+    "قائمة المالك فيها تشغيل الرد الآلي"
+  );
+  assert.strictEqual(parseInquiryType("owner_pause_reply"), "pause_auto_reply");
+  assert.strictEqual(parseInquiryType("owner_resume_reply"), "resume_auto_reply");
   delete process.env.OWNER_CONTROL_PHONES;
 
   cleanup();
