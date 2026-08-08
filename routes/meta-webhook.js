@@ -18,30 +18,45 @@ const autoReplyControl = require("../lib/auto-reply-control");
 const sessionStore = require("../lib/session");
 const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
+const {
+  tryHandleCustomerChatControl,
+} = require("../lib/customer-chat-control");
 
 const router = express.Router();
 
 async function processInbound(inbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
 
-  if (!autoReplyControl.isEnabled()) {
-    console.log("[meta] الرد الآلي متوقف عاماً");
-    return;
-  }
-
   const chatId = `${inbound.phone}@c.us`;
-  if (autoReplyControl.isChatPaused(chatId)) {
-    console.log("[meta] محادثة متوقفة:", inbound.phone);
-    return;
-  }
 
   if (inbound.messageId) {
     await markAsRead(inbound.messageId);
   }
 
   if (!inbound.body) {
+    if (!autoReplyControl.isEnabled() || autoReplyControl.isChatPaused(chatId)) {
+      return;
+    }
     const msg = createMetaMessage(inbound);
     await replyToMessage(msg, messages.nonTextMessage());
+    return;
+  }
+
+  const msg = createMetaMessage(inbound);
+
+  try {
+    if (await tryHandleCustomerChatControl(msg)) return;
+  } catch (err) {
+    console.error("[meta] خطأ أمر stop/start:", err);
+  }
+
+  if (!autoReplyControl.isEnabled()) {
+    console.log("[meta] الرد الآلي متوقف عاماً");
+    return;
+  }
+
+  if (autoReplyControl.isChatPaused(chatId)) {
+    console.log("[meta] محادثة متوقفة:", inbound.phone);
     return;
   }
 
@@ -49,7 +64,6 @@ async function processInbound(inbound) {
     return;
   }
 
-  const msg = createMetaMessage(inbound);
   try {
     await handleIncomingMessage(msg);
   } catch (err) {

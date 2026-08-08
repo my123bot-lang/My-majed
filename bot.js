@@ -28,6 +28,9 @@ const {
 const { sendWhatsAppText } = require("./lib/send-wa-message");
 const customerLeads = require("./lib/customer-leads");
 const { shouldSkipInboundMessage } = require("./lib/inbound-filter");
+const {
+  tryHandleCustomerChatControl,
+} = require("./lib/customer-chat-control");
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -388,6 +391,9 @@ async function handleCustomerMessage(msg) {
     console.log("تجاهل رسالة (بدون رد):", from, "|", skip.reason, "|", preview);
     return;
   }
+
+  // stop/start من العميل — قبل فحص الإيقاف حتى يعمل start بعد stop
+  if (await tryHandleCustomerChatControl(msg)) return;
 
   if (!autoReplyControl.isEnabled()) {
     console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);
