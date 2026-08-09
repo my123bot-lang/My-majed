@@ -694,12 +694,17 @@ ${installmentFormatted} ريال`,
 
     selectedAmountDetail: (
       amountFormatted,
-      totalFormatted,
-      installmentFormatted
+      installmentFormatted,
+      termYears,
+      totalFormatted
     ) =>
-      `التمويل: ${amountFormatted} ريال
-الإجمالي: ${totalFormatted} ريال
-القسط: ${installmentFormatted} ريال`,
+      `مبلغ التمويل: ${amountFormatted}
+مبلغ القسط: ${installmentFormatted}
+المدة: ${termYears} سنوات
+الإجمالي: ${totalFormatted}
+
+في حال السداد المبكر يتم احتساب فوايد 3 أقساط مقدم
+باقي الأقساط ترجع رأس مال من غير فوايد`,
 
     personalRejectReason: (reasonKey) => {
       const fmt = (n) => Number(n).toLocaleString("en-US");
