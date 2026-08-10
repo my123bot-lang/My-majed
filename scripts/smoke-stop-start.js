@@ -18,11 +18,15 @@ const {
   parseOwnerOutboundActivity,
   parseInboundMessage,
 } = require("../lib/interakt-webhook");
+const { parseOwnerEchoMessages } = require("../lib/meta-webhook");
 const {
   parseOwnerRemoteCommand,
   isOwnerControlPhone,
   tryHandleOwnerRemoteControl,
 } = require("../lib/owner-remote-control");
+const {
+  tryHandleCustomerChatControl,
+} = require("../lib/customer-chat-control");
 const { rememberActiveCustomer } = require("../lib/last-active-customer");
 
 const ACCOUNT = "smoke-stop-start";
@@ -83,6 +87,21 @@ async function main() {
     autoReplyControl.parseOwnerCommand("stop."),
     "stop",
     "stop. يجب أن يُفهم"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("إيقاف الرد الآلي"),
+    "stop",
+    "عنوان زر واتساب يجب أن يُفهم كـ stop"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("owner_pause_reply"),
+    "stop",
+    "معرف زر القائمة يجب أن يُفهم كـ stop"
+  );
+  assert.strictEqual(
+    autoReplyControl.parseOwnerCommand("تشغيل الرد الآلي"),
+    "start",
+    "عنوان زر التشغيل يجب أن يُفهم كـ start"
   );
 
   const handled = await tryHandleOwnerCommandByPhone(phone, "stop", {});
@@ -224,7 +243,114 @@ async function main() {
     "قوالب message_api_sent ليست أوامر مالك"
   );
 
-  // أوامر المالك عن بُعد (المسار الموثوق على Interakt)
+  // إرسال stop للعميل عبر message_api_sent / PublicApiMessage (صندوق Interakt)
+  const apiStopPayload = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-stop-api",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "stop",
+        meta_data: {},
+      },
+    },
+  };
+  const apiStop = parseOwnerOutboundCommand(apiStopPayload);
+  assert.ok(apiStop, "stop الصادر للعميل عبر API يجب أن يُلتقط");
+  assert.strictEqual(apiStop.body, "stop");
+
+  const botEchoStop = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-bot-echo",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "stop",
+        meta_data: { callbackData: "bot_reply:t1" },
+      },
+    },
+  };
+  assert.strictEqual(
+    parseOwnerOutboundCommand(botEchoStop),
+    null,
+    "stop من رد البوت نفسه (callbackData=bot_*) يُتجاهل"
+  );
+
+  const arabicStopPayload = {
+    type: "message_api_sent",
+    data: {
+      customer: { channel_phone_number: phone },
+      message: {
+        id: "m-stop-ar",
+        chat_message_type: "PublicApiMessage",
+        message_content_type: "Text",
+        is_template_message: false,
+        message: "إيقاف",
+      },
+    },
+  };
+  assert.ok(
+    parseOwnerOutboundCommand(arabicStopPayload),
+    "إيقاف الصادر للعميل يجب أن يُلتقط"
+  );
+
+  // Meta smb_message_echoes — stop من تطبيق واتساب الأعمال
+  const echoPayload = {
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "WABA",
+        changes: [
+          {
+            field: "smb_message_echoes",
+            value: {
+              messaging_product: "whatsapp",
+              metadata: {
+                display_phone_number: "966507009290",
+                phone_number_id: "123",
+              },
+              message_echoes: [
+                {
+                  from: "966507009290",
+                  to: phone,
+                  id: "wamid.echo1",
+                  timestamp: "1710000000",
+                  type: "text",
+                  text: { body: "stop" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const echoes = parseOwnerEchoMessages(echoPayload);
+  assert.strictEqual(echoes.length, 1, "يجب استخراج echo واحد");
+  assert.strictEqual(echoes[0].body, "stop");
+  assert.strictEqual(echoes[0].phone, phone);
+
+  // أرقام المندوبين/البوت للتواصل مع العملاء ليست أرقام تحكم
+  const prevOwnerEnv = process.env.OWNER_CONTROL_PHONES;
+  delete process.env.OWNER_CONTROL_PHONES;
+  assert.strictEqual(
+    isOwnerControlPhone("0507009290"),
+    false,
+    "رقم البوت/التواصل 0507009290 يجب ألا يكون تحكم تلقائياً"
+  );
+  assert.strictEqual(
+    isOwnerControlPhone("0506279834"),
+    false,
+    "رقم عميل/تواصل 0506279834 يجب ألا يكون تحكم تلقائياً"
+  );
+
+  // أوامر المالك عن بُعد (جوال شخصي منفصل فقط)
   process.env.OWNER_CONTROL_PHONES = "966509998887";
   assert.strictEqual(isOwnerControlPhone("0509998887"), true);
   assert.strictEqual(isOwnerControlPhone("0501111111"), false);
@@ -260,11 +386,57 @@ async function main() {
     true,
     "Stop من رقم التحكم يجب أن يوقف آخر عميل نشط"
   );
+
+  // ضغط زر القائمة من محادثة واتساب (عنوان الزر كما يصل من Interakt)
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  rememberActiveCustomer(phone);
+  const btnStop = await tryHandleOwnerRemoteControl(
+    ownerSelf,
+    "إيقاف الرد الآلي",
+    {}
+  );
+  assert.strictEqual(btnStop, true, "زر إيقاف الرد الآلي من واتساب يجب أن يُعالَج");
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    true,
+    "زر القائمة من محادثة واتساب يجب أن يوقف آخر عميل"
+  );
+  const btnStart = await tryHandleOwnerRemoteControl(
+    ownerSelf,
+    "تشغيل الرد الآلي",
+    {}
+  );
+  assert.strictEqual(btnStart, true);
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "زر تشغيل الرد الآلي يجب أن يستأنف"
+  );
   assert.strictEqual(
     await tryHandleOwnerRemoteControl(ownerSelf, "مرحبا"),
     false,
     "رسائل غير أوامر من رقم التحكم تكمل كعميل"
   );
+
+  // العميل لا يستطيع إيقاف/تشغيل الرد الآلي بنص stop/start
+  autoReplyControl.resumeChat(chatId, { extraKeys: [phone] });
+  const customerStopIgnored = await tryHandleCustomerChatControl({
+    from: chatId,
+    body: "stop",
+    _interaktPhone: phone,
+  });
+  assert.strictEqual(customerStopIgnored, false, "أمر العميل stop لا يُعالَج");
+  assert.strictEqual(
+    autoReplyControl.isChatPausedForIdentity(chatId, { extraKeys: [phone] }),
+    false,
+    "رسالة stop من العميل يجب ألا توقف الرد الآلي"
+  );
+  const customerStartIgnored = await tryHandleCustomerChatControl({
+    from: chatId,
+    body: "start",
+    _interaktPhone: phone,
+  });
+  assert.strictEqual(customerStartIgnored, false, "أمر العميل start لا يُعالَج");
 
   // قائمة المالك فقط تتضمن زر إيقاف/تشغيل الرد
   const menus = require("../lib/menus");
@@ -289,7 +461,8 @@ async function main() {
   assert.strictEqual(ownerBtns.buttons.length, 2);
   assert.strictEqual(parseInquiryType("owner_pause_reply"), "pause_auto_reply");
   assert.strictEqual(parseInquiryType("owner_resume_reply"), "resume_auto_reply");
-  delete process.env.OWNER_CONTROL_PHONES;
+  if (prevOwnerEnv === undefined) delete process.env.OWNER_CONTROL_PHONES;
+  else process.env.OWNER_CONTROL_PHONES = prevOwnerEnv;
 
   cleanup();
   console.log("smoke-stop-start: OK");

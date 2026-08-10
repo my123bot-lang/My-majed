@@ -19,9 +19,6 @@ const sessionStore = require("../lib/session");
 const { setCurrentWaAccountId } = require("../lib/current-wa-account");
 const waAccounts = require("../lib/whatsapp-accounts-store");
 const {
-  tryHandleCustomerChatControl,
-} = require("../lib/customer-chat-control");
-const {
   tryHandleOwnerCommandByPhone,
   tryHumanTakeoverByPhone,
 } = require("../lib/owner-chat-control");
@@ -34,8 +31,50 @@ const { rememberActiveCustomer } = require("../lib/last-active-customer");
 
 const router = express.Router();
 
+/** منع معالجة نفس رسالة stop مرتين (sent + تكرار webhook) */
+const recentOwnerOutboundIds = new Map();
+
+function wasOwnerOutboundHandled(messageId) {
+  if (!messageId) return false;
+  const id = String(messageId);
+  const now = Date.now();
+  for (const [key, ts] of recentOwnerOutboundIds.entries()) {
+    if (now - ts > 120000) recentOwnerOutboundIds.delete(key);
+  }
+  if (recentOwnerOutboundIds.has(id)) return true;
+  recentOwnerOutboundIds.set(id, now);
+  return false;
+}
+
 async function processOwnerOutbound(outbound) {
   setCurrentWaAccountId(waAccounts.getActiveAccount().id);
+
+  if (wasOwnerOutboundHandled(outbound.messageId)) {
+    console.log("[interakt] تخطي تكرار صادر المالك:", outbound.messageId);
+    return true;
+  }
+
+  try {
+    const fs = require("fs");
+    fs.writeFileSync(
+      "/tmp/interakt-last-outbound.json",
+      JSON.stringify(
+        {
+          at: new Date().toISOString(),
+          phone: outbound.phone,
+          body: outbound.body,
+          type: outbound.type,
+          chatMessageType: outbound.chatMessageType,
+          callbackData: outbound.callbackData || null,
+          messageId: outbound.messageId,
+        },
+        null,
+        2
+      )
+    );
+  } catch (_) {
+    /* ignore */
+  }
 
   const cmd = autoReplyControl.parseOwnerCommand(outbound.body);
   if (cmd) {
@@ -44,14 +83,15 @@ async function processOwnerOutbound(outbound) {
       outbound.body,
       {
         send: async (_chatId, text) => {
-          await sendWhatsAppTextViaInterakt(outbound.phone, text);
+          // owner_ack حتى لا يُعاد تفسير تأكيد الإيقاف كأمر جديد
+          await sendWhatsAppTextViaInterakt(outbound.phone, text, "owner_ack");
         },
       }
     );
 
     if (handled) {
       console.log(
-        "[interakt] أمر مالك (صادر):",
+        "[interakt] أمر مالك (صادر للعميل):",
         outbound.body,
         "→",
         String(outbound.phone).slice(-4),
@@ -126,12 +166,7 @@ async function processInbound(inbound) {
     messageId: inbound.messageId,
   });
 
-  // stop/start من العميل قبل فحص الإيقاف العام/الخاص
-  try {
-    if (await tryHandleCustomerChatControl(msg)) return;
-  } catch (err) {
-    console.error("[interakt] خطأ أمر stop/start:", err);
-  }
+  // العميل لا يوقف الرد الآلي — فقط المالك (لوحة / قائمة / رقم تحكم / رد يدوي)
 
   if (!autoReplyControl.isEnabled()) {
     console.log("[interakt] الرد الآلي متوقف عاماً");
