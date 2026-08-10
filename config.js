@@ -84,6 +84,7 @@ module.exports = {
       "commitments",
       "personal_amount_offer",
       "lower_amount_choice",
+      "loan_term_pick",
       "application_method",
     ],
     military: {
@@ -187,8 +188,10 @@ module.exports = {
     lowerStep: 5000,
     /** أقل مبلغ في قائمة «مبلغ أقل» — 44,000 تعرض: 40,000 … 10,000 */
     minLowerAmount: 10000,
-    /** مدة التمويل بالأشهر لحساب القسط */
+    /** مدة التمويل الافتراضية بالأشهر (قبل اختيار العميل) */
     loanTermMonths: 60,
+    /** خيارات مدة التمويل بالسنوات بعد اختيار المبلغ */
+    loanTermYearsOptions: [1, 2, 3, 4, 5],
     /**
      * معادلة القسط (تمويل شخصي جديد — جميع القطاعات):
      * قسط = (المبلغ ÷ 60) + (المبلغ × نسبة الفائدة ÷ 12)
@@ -695,12 +698,12 @@ ${installmentFormatted} ريال`,
     selectedAmountDetail: (
       amountFormatted,
       installmentFormatted,
-      termYears,
+      termLabel,
       totalFormatted
     ) =>
       `مبلغ التمويل: ${amountFormatted}
 مبلغ القسط: ${installmentFormatted}
-المدة: ${termYears} سنوات
+المدة: ${termLabel}
 الإجمالي: ${totalFormatted}
 
 في حال السداد المبكر يتم احتساب فوايد 3 أقساط مقدم
