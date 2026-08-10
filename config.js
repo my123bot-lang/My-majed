@@ -733,6 +733,9 @@ ${installmentFormatted} ريال`,
 في حال السداد المبكر يتم احتساب فوايد 3 أقساط مقدم
 باقي الأقساط ترجع رأس مال من غير فوايد`,
 
+    allowedLoanTermNotice: (termLabel) =>
+      `المدة المسموحة لك: ${termLabel}`,
+
     personalRejectReason: (reasonKey) => {
       const fmt = (n) => Number(n).toLocaleString("en-US");
       const militaryMin =
