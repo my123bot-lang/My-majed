@@ -81,7 +81,7 @@ async function processInbound(inbound) {
 
   const chatId = `${inbound.phone}@c.us`;
 
-  // أوامر المالك من رقم شخصي → رقم البوت (stop/start فقط).
+  // أوامر المالك من رقم شخصي → رقم البوت (stop/start/اليوم…).
   // باقي الرسائل من نفس الرقم تكمل كعميل عادي حتى يقدر يختبر البوت ويكتب Stop داخل المحادثة.
   if (inbound.body && isOwnerControlPhone(inbound.phone)) {
     try {

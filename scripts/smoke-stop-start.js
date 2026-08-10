@@ -266,6 +266,23 @@ async function main() {
     "رسائل غير أوامر من رقم التحكم تكمل كعميل"
   );
 
+  const statsCmd = parseOwnerRemoteCommand("اليوم");
+  assert.ok(statsCmd);
+  assert.strictEqual(statsCmd.cmd, "stats");
+  assert.strictEqual(parseOwnerRemoteCommand("عدد العملاء").cmd, "stats");
+  assert.strictEqual(parseOwnerRemoteCommand("احصائية").cmd, "stats");
+  let statsReply = "";
+  const statsHandled = await tryHandleOwnerRemoteControl(ownerSelf, "اليوم", {
+    send: async (_chatId, body) => {
+      statsReply = String(body || "");
+    },
+  });
+  assert.strictEqual(statsHandled, true, "أمر اليوم يجب أن يُعالج من رقم التحكم");
+  assert.ok(
+    statsReply.includes("عدد العملاء") && statsReply.includes("جهات تواصل"),
+    "رد الإحصائية يجب أن يتضمن عدد العملاء"
+  );
+
   // قائمة المالك فقط تتضمن زر إيقاف/تشغيل الرد
   const menus = require("../lib/menus");
   const { parseInquiryType } = require("../lib/validators");
