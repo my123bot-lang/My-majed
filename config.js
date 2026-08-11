@@ -707,12 +707,21 @@ ${personalFormatted} ريال شخصي
 
 سنرسل لك رقم المندوب المختص الآن.`,
 
-    personalAmountOffer: (amountFormatted, installmentFormatted) =>
-      `قيمة التمويل:
-${amountFormatted} ريال
+    personalAmountOffer: (
+      amountFormatted,
+      installmentFormatted,
+      interestFormatted,
+      termLabel
+    ) =>
+      `مبلغ التمويل المتاح: ${amountFormatted} ريال
 
-القسط الشهري:
-${installmentFormatted} ريال`,
+مبلغ التمويل: ${amountFormatted} ريال
+مبلغ القسط: ${installmentFormatted} ريال
+مبلغ الفايدة: ${interestFormatted} ريال
+المدة: ${termLabel}
+
+في حال السداد المبكر يتم احتساب فوايد 3 أقساط مقدم
+باقي الأقساط ترجع رأس مال من غير فوايد`,
 
     lowerAmountsNumberedList: (lines) =>
       `اختر المبلغ المناسب:\n\n${lines}`,
@@ -720,11 +729,15 @@ ${installmentFormatted} ريال`,
     selectedAmountDetail: (
       amountFormatted,
       installmentFormatted,
+      interestFormatted,
       termLabel,
       totalFormatted
     ) =>
-      `مبلغ التمويل: ${amountFormatted}
-مبلغ القسط: ${installmentFormatted}
+      `مبلغ التمويل المتاح: ${amountFormatted} ريال
+
+مبلغ التمويل: ${amountFormatted} ريال
+مبلغ القسط: ${installmentFormatted} ريال
+مبلغ الفايدة: ${interestFormatted} ريال
 المدة: ${termLabel}
 الإجمالي: ${totalFormatted}
 
