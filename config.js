@@ -710,15 +710,13 @@ ${personalFormatted} ريال شخصي
     personalAmountOffer: (
       amountFormatted,
       installmentFormatted,
-      interestFormatted,
-      termLabel
+      termLabel,
+      totalFormatted
     ) =>
-      `مبلغ التمويل المتاح: ${amountFormatted} ريال
-
-مبلغ التمويل: ${amountFormatted} ريال
-مبلغ القسط: ${installmentFormatted} ريال
-مبلغ الفايدة: ${interestFormatted} ريال
+      `مبلغ التمويل: ${amountFormatted}
+مبلغ القسط: ${installmentFormatted}
 المدة: ${termLabel}
+الإجمالي: ${totalFormatted}
 
 في حال السداد المبكر يتم احتساب فوايد 3 أقساط مقدم
 باقي الأقساط ترجع رأس مال من غير فوايد`,
@@ -729,15 +727,11 @@ ${personalFormatted} ريال شخصي
     selectedAmountDetail: (
       amountFormatted,
       installmentFormatted,
-      interestFormatted,
       termLabel,
       totalFormatted
     ) =>
-      `مبلغ التمويل المتاح: ${amountFormatted} ريال
-
-مبلغ التمويل: ${amountFormatted} ريال
-مبلغ القسط: ${installmentFormatted} ريال
-مبلغ الفايدة: ${interestFormatted} ريال
+      `مبلغ التمويل: ${amountFormatted}
+مبلغ القسط: ${installmentFormatted}
 المدة: ${termLabel}
 الإجمالي: ${totalFormatted}
 
