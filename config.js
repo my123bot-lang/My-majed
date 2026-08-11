@@ -80,9 +80,7 @@ module.exports = {
       "salary",
       "real_estate",
       "commitments",
-      "personal_amount_offer",
-      "lower_amount_choice",
-      "loan_term_pick",
+      "personal_amount_detail",
       "application_method",
     ],
     military: {
