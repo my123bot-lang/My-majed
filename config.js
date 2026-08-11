@@ -82,6 +82,7 @@ module.exports = {
       "commitments",
       "personal_amount_detail",
       "lower_amount_choice",
+      "loan_term_pick",
       "application_method",
     ],
     military: {
