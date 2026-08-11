@@ -81,6 +81,7 @@ module.exports = {
       "real_estate",
       "commitments",
       "personal_amount_detail",
+      "lower_amount_choice",
       "application_method",
     ],
     military: {
