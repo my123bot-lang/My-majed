@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>لوحة تحكم — ماجد</title>
-  <link rel="stylesheet" href="/admin.css?v=3" />
+  <link rel="stylesheet" href="/admin.css?v=4" />
 </head>
 <body>
 
@@ -74,7 +74,7 @@
       </div>
       <nav class="nav">
         <button type="button" class="nav-item active" data-page="home" id="navHome"><span class="nav-icon">🏠</span><span>الرئيسية</span></button>
-        <button type="button" class="nav-item" data-page="stats" id="navStats"><span class="nav-icon">📊</span><span>الإحصائية</span></button>
+        <button type="button" class="nav-item" data-page="stats" id="navStats"><span class="nav-icon">📊</span><span>عدد العملاء</span></button>
         <button type="button" class="nav-item" data-page="leads" id="navLeads"><span class="nav-icon">👥</span><span>سجل العملاء</span></button>
         <button type="button" class="nav-item" data-page="settings" id="navSettings"><span class="nav-icon">📞</span><span>بيانات التواصل</span></button>
         <button type="button" class="nav-item hidden" data-page="users" id="navUsers"><span class="nav-icon">🔐</span><span>المستخدمون</span></button>
@@ -99,7 +99,12 @@
       <section id="page-home" class="page active">
         <div class="page-header">
           <h1>الرئيسية</h1>
-          <p>ملخص سريع واختصارات</p>
+          <p>عدد العملاء وملخص اليوم</p>
+        </div>
+        <div class="card" id="homeCustomersCard">
+          <h3>عدد العملاء</h3>
+          <p class="muted" style="margin:0 0 14px;font-size:0.88rem;">كل رقم جوال يُحسب مرة واحدة — ليس عدد الرسائل</p>
+          <div class="customer-hero" id="homeCustomers"></div>
         </div>
         <div class="card">
           <h3>إحصائية اليوم — حسب الجوال</h3>
@@ -118,7 +123,7 @@
         <div class="card">
           <h3>اختصارات</h3>
           <div class="quick-links">
-            <button type="button" class="quick-link" data-goto="stats">عرض الإحصائية الكاملة</button>
+            <button type="button" class="quick-link" data-goto="stats">عرض عدد العملاء</button>
             <button type="button" class="quick-link" data-goto="leads" data-wa="majed">عملاء ماجد</button>
             <button type="button" class="quick-link" data-goto="settings" data-wa="majed">تواصل ماجد</button>
             <button type="button" class="quick-link hidden" data-goto="whatsapp" id="homeLinkWhatsapp">الجوالات وربط واتساب</button>
@@ -139,8 +144,8 @@
       <!-- الإحصائية -->
       <section id="page-stats" class="page">
         <div class="page-header">
-          <h1>إحصائية المكالمات</h1>
-          <p>متابعة نتائج بوت ماجد</p>
+          <h1>عدد العملاء</h1>
+          <p>عملاء فريدون حسب رقم الجوال — مع تفصيل النتائج</p>
         </div>
         <div class="wa-tabs" id="statsWaTabs"></div>
         <p class="muted" id="statsWaTitle" style="margin:0 0 12px;font-weight:700;"></p>
@@ -148,6 +153,7 @@
         <p id="statsLoading" class="muted">جاري التحميل…</p>
         <div id="statsContent" style="display:none;">
           <p class="muted" id="statsUpdated"></p>
+          <div class="customer-hero" id="statsCustomers"></div>
           <div class="card">
             <p class="section-title">اليوم</p>
             <div class="stats-grid" id="todayGrid"></div>
@@ -167,7 +173,8 @@
                 <thead>
                   <tr>
                     <th>اليوم</th>
-                    <th>تواصل</th>
+                    <th>عملاء</th>
+                    <th>رسائل</th>
                     <th>محادثات</th>
                     <th>مؤهل</th>
                     <th>نجاح</th>
@@ -187,7 +194,7 @@
       <section id="page-leads" class="page">
         <div class="page-header">
           <h1>سجل العملاء</h1>
-          <p>سجل عملاء بوت ماجد</p>
+          <p>سجل عملاء بوت ماجد — العدد الفريد يظهر أعلى الجدول</p>
         </div>
         <div class="card">
           <div class="card panel-accent hidden" id="leadsFollowUpCard">
@@ -675,6 +682,6 @@
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="/dashboard.js?v=25"></script>
+  <script src="/dashboard.js?v=26"></script>
 </body>
 </html>

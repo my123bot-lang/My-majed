@@ -27,6 +27,7 @@ const {
   tryHandleOwnerRemoteControl,
   isOwnerControlPhone,
 } = require("../lib/owner-remote-control");
+const { recordInboundContact } = require("../lib/call-stats");
 
 const router = express.Router();
 
@@ -128,6 +129,12 @@ async function processInbound(inbound) {
 
   if (sessionStore.shouldThrottle(chatId, inbound.body)) {
     return;
+  }
+
+  try {
+    recordInboundContact(inbound.phone);
+  } catch (_) {
+    /* ignore */
   }
 
   try {

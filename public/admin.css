@@ -547,6 +547,47 @@ input[id="serviceStopAgentPhone"] {
   gap: 14px;
 }
 
+.customer-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+}
+
+.customer-hero-card {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.customer-hero-card.alt {
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+}
+
+.customer-hero-card.dark {
+  background: linear-gradient(135deg, #0c1222, #134e4a);
+}
+
+.customer-hero-card .num {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.customer-hero-card.compact .num {
+  font-size: 1.75rem;
+}
+
+.customer-hero-card .lbl {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  opacity: 0.92;
+}
+
 .stat-card {
   background: #fff;
   border: 1px solid var(--border);
