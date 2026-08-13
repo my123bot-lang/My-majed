@@ -373,7 +373,7 @@ async function handleCustomerMessage(msg) {
     /* ignore */
   }
 
-  callStats.recordInboundContact();
+  callStats.recordInboundContact(phoneHint || from);
   const replied = await handleIncomingMessage(msg);
   if (!replied) {
     console.warn(

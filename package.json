@@ -20,7 +20,8 @@
     "restart": "node scripts/unlock-session.js && node bot.js majed",
     "test:calc": "node scripts/smoke-calc.js",
     "test:stop-start": "node scripts/smoke-stop-start.js",
-    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js"
+    "test:customers": "node scripts/smoke-customer-stats.js",
+    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-customer-stats.js"
   },
   "keywords": [],
   "author": "",

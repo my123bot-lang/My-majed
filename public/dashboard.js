@@ -5,7 +5,7 @@
 
   const PAGE_TITLES = {
     home: "الرئيسية",
-    stats: "إحصائية المكالمات",
+    stats: "عدد العملاء",
     leads: "سجل العملاء",
     settings: "بيانات التواصل",
     users: "المستخدمون",
@@ -383,7 +383,8 @@
   });
 
   const MAIN_METRICS = [
-    { key: "contacts", label: "جهات تواصل" },
+    { key: "customers", label: "عملاء" },
+    { key: "contacts", label: "رسائل" },
     { key: "conversations", label: "محادثات" },
     { key: "qualified", label: "مؤهلون" },
     { key: "success", label: "نجاح" },
@@ -497,10 +498,33 @@
     }
   }
 
+  function renderCustomerHero(container, customers, compact) {
+    if (!container) return;
+    const c = customers || {};
+    const items = [
+      { num: c.today || 0, lbl: "عملاء اليوم", cls: "" },
+      { num: c.week || 0, lbl: "هذا الأسبوع", cls: "alt" },
+      { num: c.total || 0, lbl: "الإجمالي", cls: "dark" },
+      { num: c.newThisWeek || 0, lbl: "جدد هذا الأسبوع", cls: "alt" },
+      { num: c.inLeads || 0, lbl: "في سجل العملاء", cls: "" },
+    ];
+    container.innerHTML = items
+      .map(
+        (it) =>
+          `<div class="customer-hero-card ${it.cls}${compact ? " compact" : ""}">` +
+          `<div class="num">${it.num}</div><div class="lbl">${it.lbl}</div></div>`
+      )
+      .join("");
+  }
+
   function renderMetricCards(container, bucket, compact) {
     const apps = bucket.applications || { electronic: 0, branch: 0 };
     const items = [
-      ...MAIN_METRICS.map((m) => ({ num: bucket[m.key] || 0, lbl: m.label })),
+      ...MAIN_METRICS.map((m) => ({
+        num: bucket[m.key] || 0,
+        lbl: m.label,
+        highlight: m.key === "customers",
+      })),
       { num: apps.electronic || 0, lbl: "إلكتروني", highlight: true },
       { num: apps.branch || 0, lbl: "فرع", highlight: true },
     ];
@@ -522,15 +546,17 @@
       const data = await api("/api/stats");
       statsCache = data;
       const byWa = $("homeByWa");
+      renderCustomerHero($("homeCustomers"), data.customers);
       if (byWa && data.accounts?.length) {
         byWa.innerHTML = data.accounts
           .map((acc) => {
             const t = acc.today || {};
+            const cu = acc.customers || {};
             return (
               `<div class="wa-account-card">` +
               `<h4>${escapeHtml(acc.label)}</h4>` +
               `<p class="muted" style="margin:0 0 8px;">اليوم</p>` +
-              `<p>تواصل <strong>${t.contacts || 0}</strong> · محادثات <strong>${t.conversations || 0}</strong> · مؤهل <strong>${t.qualified || 0}</strong> · نجاح <strong>${t.success || 0}</strong></p>` +
+              `<p>عملاء <strong>${cu.today || t.customers || 0}</strong> · رسائل <strong>${t.contacts || 0}</strong> · محادثات <strong>${t.conversations || 0}</strong> · مؤهل <strong>${t.qualified || 0}</strong> · نجاح <strong>${t.success || 0}</strong></p>` +
               `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
               `<button type="button" class="btn-sm btn-secondary wa-goto-leads" data-wa="${escapeHtml(acc.waAccountId)}">متابعة العملاء</button>` +
               `<button type="button" class="btn-sm btn-secondary wa-goto-settings" data-wa="${escapeHtml(acc.waAccountId)}">أرقام التواصل</button>` +
@@ -562,8 +588,11 @@
       }
       renderMetricCards($("homeToday"), data.today || {}, true);
       const t = data.totals || {};
+      const cu = data.customers || {};
       $("homeSummary").innerHTML =
-        `<p>إجمالي (كل الجوالات): محادثات <strong>${t.conversations || 0}</strong> · ` +
+        `<p>إجمالي العملاء (أرقام مختلفة): <strong>${cu.total || t.customers || 0}</strong> · ` +
+        `في السجل: <strong>${cu.inLeads || 0}</strong> · ` +
+        `محادثات <strong>${t.conversations || 0}</strong> · ` +
         `مؤهلون <strong>${t.qualified || 0}</strong> · نجاح <strong>${t.success || 0}</strong></p>`;
       await renderPortalLinks();
     } catch (err) {
@@ -601,6 +630,7 @@
         ? new Date(data.updatedAt).toLocaleString("ar-SA")
         : "—";
       $("statsUpdated").textContent = "آخر تحديث: " + updated;
+      renderCustomerHero($("statsCustomers"), data.customers);
       renderMetricCards($("todayGrid"), data.today || {});
       renderMetricCards($("totalsGrid"), data.totals || {});
 
@@ -619,6 +649,7 @@
           return (
             "<tr>" +
             `<td>${row.date}</td>` +
+            `<td>${row.customers || 0}</td>` +
             `<td>${row.contacts || 0}</td>` +
             `<td>${row.conversations || 0}</td>` +
             `<td>${row.qualified || 0}</td>` +
@@ -1279,8 +1310,10 @@
         countsText = `نتائج البحث (${parts.join(" + ")}): ${data.total || 0} سجل`;
         if (!wa) countsText += " — (تبويب الكل)";
       } else {
+        const unique = data.uniqueTotal != null ? data.uniqueTotal : data.total || 0;
         countsText =
-          `${waLabel} — تمويل شخصي: ${c.personal_finance || 0} · عرض بديل: ${c.combo_offer || 0} · مرفوض: ${c.rejected || 0} · عقاري: ${c.property || 0} · إيقاف خدمات: ${c.service_stop || 0} · أخرى: ${c.qualified || 0}`;
+          `عدد العملاء: ${unique} (رقم جوال مختلف)` +
+          ` — ${waLabel} — تمويل شخصي: ${c.personal_finance || 0} · عرض بديل: ${c.combo_offer || 0} · مرفوض: ${c.rejected || 0} · عقاري: ${c.property || 0} · إيقاف خدمات: ${c.service_stop || 0} · أخرى: ${c.qualified || 0}`;
         countsText += ` · إلكتروني: ${ac.electronic || 0} · فرع: ${ac.branch || 0} · باقة: ${ac.combo || 0}`;
         countsText += ` · ⏳ ${mc.waiting || 0} · ★ ${mc.reminder || 0} · ✓ ${mc.done || 0} · ✕ ${mc.rejected || 0}`;
         if (markFilter) {
