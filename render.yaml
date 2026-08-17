@@ -37,3 +37,5 @@ services:
         value: majed_verify
       - key: META_APP_SECRET
         sync: false
+      - key: CUSTOMERS_DATA_DIR
+        sync: false

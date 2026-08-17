@@ -225,7 +225,7 @@ async function processOutboundQueue() {
           err.message
         );
       }
-      await sleep(CONFIG.outbound?.delayMs || 3500);
+      await sleep(item.delayMs || CONFIG.outbound?.delayMs || 3500);
     }
   } catch (err) {
     console.warn("outbound queue:", err.message);
