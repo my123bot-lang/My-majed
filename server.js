@@ -64,6 +64,8 @@ function extractToken(req) {
 }
 
 function resolveUser(req) {
+  if (adminAuth.isAdminOpen()) return adminAuth.openAdminUser();
+
   const token = extractToken(req);
   const portalUser = portalAccess.getPortalSessionUser(token);
   if (portalUser) return portalUser;
@@ -83,6 +85,10 @@ function resolveUser(req) {
 }
 
 function requireAuth(req, res, next) {
+  if (adminAuth.isAdminOpen()) {
+    req.user = adminAuth.openAdminUser();
+    return next();
+  }
   if (!adminAuth.hasUsers()) return next();
 
   const user = resolveUser(req);
@@ -102,6 +108,10 @@ function userHasPerm(user, perm) {
 
 function requirePerm(perm) {
   return (req, res, next) => {
+    if (adminAuth.isAdminOpen()) {
+      req.user = adminAuth.openAdminUser();
+      return next();
+    }
     if (!adminAuth.hasUsers()) return next();
     const user = req.user || resolveUser(req);
     if (!user) {
@@ -147,10 +157,12 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.get("/api/auth/status", attachUser, (req, res) => {
+  const openAccess = adminAuth.isAdminOpen();
   res.json({
     hasUsers: adminAuth.hasUsers(),
     legacyPassword: Boolean(ADMIN_PASSWORD),
-    user: req.user || null,
+    openAccess,
+    user: req.user || (openAccess ? adminAuth.openAdminUser() : null),
     roleLabels: adminAuth.ROLE_LABELS,
     roles: adminAuth.ROLES,
   });
@@ -880,7 +892,9 @@ function printStartupBanner() {
   if (ips.length) {
     ips.forEach((ip) => console.log(`  شبكة:    http://${ip}:${PORT}`));
   }
-  if (adminAuth.hasUsers()) {
+  if (adminAuth.isAdminOpen()) {
+    console.log("  الدخول:  مفتوح بدون كلمة مرور (ADMIN_OPEN=1)");
+  } else if (adminAuth.hasUsers()) {
     console.log("  الدخول:  مستخدمون في data/admin-users.json");
   } else if (ADMIN_PASSWORD) {
     console.log("  الدخول:  ADMIN_PASSWORD (أو أنشئ مستخدمين من اللوحة)");
