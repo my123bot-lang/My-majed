@@ -17,6 +17,7 @@
   let currentUser = null;
   let roleLabels = ROLE_LABELS;
   let statsCache = null;
+  let openAccess = false;
   /** @type {{ slug: string, label: string, waAccountId: string|null, fullAccess: boolean }|null} */
   let portalScope = null;
 
@@ -208,6 +209,7 @@
     }
     const logoutBtn = $("logoutBtn");
     if (logoutBtn && isPortalMode()) logoutBtn.textContent = "إغلاق";
+    if (logoutBtn) logoutBtn.classList.toggle("hidden", openAccess || currentUser?.id === "open");
   }
 
   function ensurePortalBanner(pageId) {
@@ -269,6 +271,13 @@
 
       const status = await api("/api/auth/status", { method: "GET" });
       roleLabels = status.roleLabels || ROLE_LABELS;
+
+      if (status.openAccess) {
+        openAccess = true;
+        currentUser = status.user;
+        await enterApp();
+        return;
+      }
 
       if (!status.hasUsers && !status.legacyPassword) {
         showScreen("setup");
