@@ -250,6 +250,16 @@ app.get("/p/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+app.use("/admin/api", require("./routes/admin-api"));
+
+app.get(["/admin", "/admin/"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+app.get("/panel", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.get("/", (req, res) => {
   const slug = req.query.portal || req.query.p;
   const key = req.query.k || req.query.key || req.query.token;
@@ -258,7 +268,7 @@ app.get("/", (req, res) => {
       `/p/${encodeURIComponent(String(slug).trim().toLowerCase())}?k=${encodeURIComponent(String(key).trim())}`
     );
   }
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 app.get("/api/auth/me", attachUser, (req, res) => {

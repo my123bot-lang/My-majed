@@ -22,7 +22,8 @@
     "test:stop-start": "node scripts/smoke-stop-start.js",
     "test:leads": "node scripts/smoke-leads-dashboard.js",
     "test:admin-open": "node scripts/smoke-admin-open.js",
-    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js"
+    "test:raed-admin": "node scripts/smoke-raed-admin.js",
+    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js && node scripts/smoke-raed-admin.js"
   },
   "keywords": [],
   "author": "",
