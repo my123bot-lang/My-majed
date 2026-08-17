@@ -6,7 +6,7 @@
   const PAGE_TITLES = {
     home: "الرئيسية",
     stats: "إحصائية المكالمات",
-    leads: "سجل العملاء",
+    leads: "العملاء",
     settings: "بيانات التواصل",
     users: "المستخدمون",
     whatsapp: "الجوالات والإضافات",
@@ -295,7 +295,6 @@
       await syncWaLeadTabsFromApi();
     }
     initSettingsWaTabs();
-    initLeadNoteModal();
     showPage(isPortalMode() && portalScope?.waAccountId ? "leads" : "home");
   }
 
@@ -754,371 +753,315 @@
     });
   }
 
-  function isElectronicLead(row) {
-    return appLabel(row) === "إلكتروني";
+  const OUTCOME_TABS = [
+    { id: "finance_link", label: "أخذ رابط التمويل" },
+    { id: "package", label: "أخذ باقة" },
+    { id: "limit_exhausted", label: "مستنفذ حد" },
+    { id: "service_stop", label: "إيقاف خدمات" },
+    { id: "order_number", label: "رقم طلب" },
+  ];
+  const WORKPLACE_OPTS = [
+    { id: "government", label: "حكومي" },
+    { id: "private", label: "خاص" },
+    { id: "military", label: "عسكري" },
+  ];
+  const LEADS_PAGE_SIZE = 100;
+  let customerDay = "today";
+  let followupFilter = "all";
+  let leadsCache = [];
+  let leadsHasMore = false;
+  let lastLeadsPack = null;
+
+  function formatCrmTime(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("ar-SA", {
+      timeZone: "Asia/Riyadh",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
-  function leadShowsOrderNumber(row) {
-    if (row.applicationOrderNumber) return true;
-    return (
-      isElectronicLead(row) ||
-      Boolean(row.followUpSentAt) ||
-      row.contactDelivery === "electronic_link" ||
-      Boolean(row.portalUrl)
-    );
+  function followupStatusOf(row) {
+    if (row?.followUpStatus && row.followUpStatus.label) return row.followUpStatus;
+    const q = row?.followUpQueue;
+    if (q && (q.status === "pending" || q.status === "processing")) {
+      return { sent: false, pending: true, label: "في الطابور" };
+    }
+    if (q && q.status === "failed" && !row?.followUpSentAt) {
+      return { sent: false, failed: true, label: "فشل", error: q.error };
+    }
+    if (!row?.followUpSentAt) return { sent: false, label: "لم تُرسل متابعة" };
+    return { sent: true, label: "تمت المتابعة", at: row.followUpSentAt };
   }
 
-  function orderNumberCellHtml(row) {
-    const num = row.applicationOrderNumber;
-    if (num) {
-      const when = row.orderNumberAt
-        ? new Date(row.orderNumberAt).toLocaleString("ar-SA")
-        : "";
+  function followupBadgesHtml(row) {
+    const st = followupStatusOf(row);
+    if (st.pending) {
+      return `<span class="badge pending-follow">في الطابور</span>`;
+    }
+    if (st.failed) {
+      return `<span class="badge paused" title="${escapeHtml(st.error || "")}">فشل المتابعة</span>`;
+    }
+    if (st.sent) {
       return (
-        `<span class="order-num" title="${escapeHtml(when)}">` +
-        `${escapeHtml(num)}</span>`
+        `<span class="badge followed">${escapeHtml(st.label)}</span>` +
+        (st.at ? `<div class="meta-line">آخر متابعة: ${escapeHtml(formatCrmTime(st.at))}</div>` : "")
       );
     }
-    if (!leadShowsOrderNumber(row)) return "—";
-    if (!can("settings:write")) return "—";
+    return `<span class="badge pending-follow">لم تُرسل متابعة</span>`;
+  }
+
+  function workplaceChoicesHtml(row) {
+    if (!can("settings:write")) {
+      return escapeHtml(row.workplaceLabel || "—");
+    }
+    const selected = row.workplace || "";
+    const buttons = WORKPLACE_OPTS.map((o) => {
+      const active = selected === o.id ? " active" : "";
+      return `<button type="button" class="work-choice${active}" data-act="workplace" data-workplace="${o.id}" data-lead-id="${escapeHtml(row.id || "")}">${o.label}</button>`;
+    }).join("");
+    const company = row.employerCompany
+      ? `<div class="meta-line">${escapeHtml(row.employerCompany)}</div>`
+      : row.workplaceLabel && !selected
+        ? `<div class="meta-line">${escapeHtml(row.workplaceLabel)}</div>`
+        : "";
+    return `<div class="work-choices">${buttons}</div>${company}`;
+  }
+
+  function notesChoicesHtml(row) {
+    if (!can("settings:write")) {
+      return escapeHtml(row.outcomeLabel || "—");
+    }
+    const selected = row.outcome || "";
     return (
-      `<div class="order-num-edit">` +
-      `<input type="text" class="order-num-input" dir="ltr" ` +
-      `data-lead-id="${escapeHtml(row.id || "")}" ` +
-      `placeholder="101…" pattern="101[0-9]*" title="رقم الطلب يبدأ بـ 101" />` +
-      `<button type="button" class="btn-sm btn-primary order-num-save" ` +
-      `data-lead-id="${escapeHtml(row.id || "")}">حفظ</button>` +
+      `<div class="work-choices note-choices">` +
+      OUTCOME_TABS.map((o) => {
+        const active = selected === o.id ? " active" : "";
+        return `<button type="button" class="note-choice${active}" data-act="outcome" data-outcome="${o.id}" data-lead-id="${escapeHtml(row.id || "")}">${o.label}</button>`;
+      }).join("") +
       `</div>`
     );
   }
 
-  let leadNoteModalLeadId = null;
-  const leadsNoteById = new Map();
-
-  function notePreview(text, max = 36) {
-    const t = String(text || "").trim();
-    if (!t) return "";
-    if (t.length <= max) return t;
-    return t.slice(0, max) + "…";
-  }
-
-  function statusNoteCellHtml(row) {
-    const note = row.orderStatusNote;
-    const when = row.orderStatusNoteAt
-      ? new Date(row.orderStatusNoteAt).toLocaleString("ar-SA")
-      : "";
-    const canEdit = can("settings:write");
-    if (note) {
-      const preview = escapeHtml(notePreview(note));
-      const btnLabel = canEdit ? "تعديل" : "عرض";
-      const btn =
-        canEdit || can("stats:read")
-          ? `<button type="button" class="btn-sm btn-secondary lead-note-btn" data-lead-id="${escapeHtml(row.id || "")}" data-phone="${escapeHtml(row.phone || "")}">${btnLabel}</button>`
-          : "";
-      return (
-        `<div class="lead-note-cell">` +
-        `<span class="lead-note-preview" title="${escapeHtml(when)}">${preview}</span> ` +
-        btn +
-        `</div>`
-      );
-    }
-    if (!canEdit) return "—";
-    return (
-      `<button type="button" class="btn-sm btn-primary lead-note-btn" ` +
-      `data-lead-id="${escapeHtml(row.id || "")}" data-phone="${escapeHtml(row.phone || "")}">إضافة ملاحظة</button>`
-    );
-  }
-
-  function closeLeadNoteModal() {
-    const modal = $("leadNoteModal");
-    if (modal) modal.classList.add("hidden");
-    leadNoteModalLeadId = null;
-  }
-
-  function openLeadNoteModal(leadId, phone) {
-    leadNoteModalLeadId = leadId;
-    const note = leadsNoteById.get(leadId) || "";
-    const modal = $("leadNoteModal");
-    const title = $("leadNoteModalTitle");
-    const textEl = $("leadNoteModalText");
-    const meta = $("leadNoteModalMeta");
-    if (!modal || !textEl) return;
-    if (title) title.textContent = "ملاحظة — حالة الطلب";
-    const phoneLine = $("leadNoteModalPhone");
-    if (phoneLine) phoneLine.textContent = phone ? `العميل: ${phone}` : "";
-    textEl.value = note || "";
-    if (meta) meta.textContent = can("settings:write") ? "تُحفظ لكل سجلات نفس الجوال على هذا البوت" : "";
-    textEl.disabled = !can("settings:write");
-    $("leadNoteModalSave")?.classList.toggle("hidden", !can("settings:write"));
-    $("leadNoteModalClear")?.classList.toggle("hidden", !can("settings:write"));
-    modal.classList.remove("hidden");
-    textEl.focus();
-  }
-
-  function initLeadNoteModal() {
-    if ($("leadNoteModal")?.dataset.bound) return;
-    const modal = $("leadNoteModal");
-    if (!modal) return;
-    modal.dataset.bound = "1";
-
-    $("leadNoteModalClose")?.addEventListener("click", closeLeadNoteModal);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeLeadNoteModal();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !modal.classList.contains("hidden")) {
-        closeLeadNoteModal();
-      }
-    });
-
-    $("leadNoteModalSave")?.addEventListener("click", async () => {
-      const id = leadNoteModalLeadId;
-      const text = $("leadNoteModalText")?.value ?? "";
-      if (!id) return;
-      const btn = $("leadNoteModalSave");
-      if (btn) btn.disabled = true;
-      try {
-        await api("/api/leads/" + encodeURIComponent(id) + "/status-note", {
-          method: "PATCH",
-          body: JSON.stringify({ note: text }),
-        });
-        showToast(text.trim() ? "تم حفظ الملاحظة" : "تم مسح الملاحظة", true);
-        closeLeadNoteModal();
-        await loadLeads();
-      } catch (err) {
-        showToast(err.message, false);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    });
-
-    $("leadNoteModalClear")?.addEventListener("click", async () => {
-      const id = leadNoteModalLeadId;
-      if (!id) return;
-      if (!window.confirm("مسح الملاحظة لهذا العميل؟")) return;
-      const textEl = $("leadNoteModalText");
-      if (textEl) textEl.value = "";
-      $("leadNoteModalSave")?.click();
-    });
-  }
-
-  function bindLeadNoteButtons() {
-    document.querySelectorAll(".lead-note-btn").forEach((btn) => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = "1";
-      btn.addEventListener("click", () => {
-        openLeadNoteModal(btn.dataset.leadId, btn.dataset.phone);
-      });
-    });
-  }
-
-  function leadManualMarkHtml(row) {
-    const mark = row.manualMark || "";
-    const id = row.id || "";
-    if (!can("settings:write")) {
-      if (mark === "done") {
-        return `<span class="lead-mark-dot done" title="منفذ">●</span>`;
-      }
-      if (mark === "rejected") {
-        return `<span class="lead-mark-dot rejected" title="مرفوض">●</span>`;
-      }
-      if (mark === "waiting") {
-        return `<span class="lead-mark-dot waiting" title="انتظار">●</span>`;
-      }
-      if (mark === "reminder") {
-        return `<span class="lead-mark-dot reminder" title="تذكير">●</span>`;
-      }
-      return `<span class="lead-mark-dot none" aria-hidden="true"></span>`;
-    }
-    if (!id) return `<span class="lead-mark-dot none"></span>`;
-    return (
-      `<span class="lead-mark-picker" data-lead-id="${escapeHtml(id)}">` +
-      `<button type="button" class="lead-mark-btn none${mark === "" ? " active" : ""}" data-mark="" title="بدون علامة">○</button>` +
-      `<button type="button" class="lead-mark-btn waiting${mark === "waiting" ? " active" : ""}" data-mark="waiting" title="انتظار">⏳</button>` +
-      `<button type="button" class="lead-mark-btn reminder${mark === "reminder" ? " active" : ""}" data-mark="reminder" title="تذكير">★</button>` +
-      `<button type="button" class="lead-mark-btn done${mark === "done" ? " active" : ""}" data-mark="done" title="منفذ">✓</button>` +
-      `<button type="button" class="lead-mark-btn rejected${mark === "rejected" ? " active" : ""}" data-mark="rejected" title="مرفوض">✕</button>` +
-      `</span>`
-    );
-  }
-
-  function leadRowClasses(row, searchActive) {
-    const mark = row.manualMark || "";
-    if (mark === "done") return "row-mark-done";
-    if (mark === "rejected") return "row-mark-rejected";
-    if (mark === "waiting") return "row-mark-waiting";
-    if (mark === "reminder") return "row-mark-reminder";
-    if (searchActive) return "row-search-hit";
-    return "";
-  }
-
-  function leadPhoneCellHtml(row, waId) {
-    const markHtml = leadManualMarkHtml(row);
-    const link =
-      `<a class="phone-link wa-chat-link" href="#" data-phone="${escapeHtml(row.phone)}" data-wa-id="${escapeHtml(waId)}" data-wa-label="${escapeHtml(row.waAccountLabel || "")}" title="فتح المحادثة في واتساب البوت — ${escapeHtml(row.waAccountLabel || "البوت")}">${escapeHtml(row.phone)}</a>`;
-    const paused = Boolean(row.autoReplyPaused);
-    const toggle =
-      `<button type="button" class="btn-sm ${paused ? "btn-primary" : "btn-secondary"} lead-autoreply-btn" ` +
-      `data-phone="${escapeHtml(row.phone || "")}" data-wa-id="${escapeHtml(waId)}" data-paused="${paused ? "1" : "0"}" ` +
-      `title="${paused ? "استئناف الرد الآلي — لك فقط" : "إيقاف الرد الآلي — لك فقط (ليس للعميل)"}">` +
-      `${paused ? "تشغيل الرد الآلي" : "إيقاف الرد الآلي"}</button>`;
-    return `<div class="lead-phone-cell">${markHtml}${link} ${toggle}</div>`;
-  }
-
-  function bindLeadManualMarkButtons() {
-    document.querySelectorAll(".lead-mark-picker").forEach((wrap) => {
-      if (wrap.dataset.bound) return;
-      wrap.dataset.bound = "1";
-      wrap.querySelectorAll(".lead-mark-btn").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const leadId = wrap.dataset.leadId;
-          const mark = btn.dataset.mark ?? "";
-          if (!leadId) return;
-          if (btn.classList.contains("active")) return;
-          wrap.querySelectorAll(".lead-mark-btn").forEach((b) => {
-            b.disabled = true;
-          });
-          try {
-            await api("/api/leads/" + encodeURIComponent(leadId) + "/manual-mark", {
-              method: "PATCH",
-              body: JSON.stringify({ mark }),
-            });
-            const labels = {
-              "": "بدون علامة",
-              waiting: "انتظار",
-              reminder: "تذكير",
-              done: "منفذ",
-              rejected: "مرفوض",
-            };
-            showToast(`تم التحديد: ${labels[mark] ?? mark}`, true);
-            await loadLeads();
-          } catch (err) {
-            showToast(err.message, false);
-            wrap.querySelectorAll(".lead-mark-btn").forEach((b) => {
-              b.disabled = false;
-            });
-          }
-        });
-      });
-    });
-  }
-
-  function leadDeleteCellHtml(row) {
-    if (!can("settings:write")) return "—";
-    const id = row.id || "";
-    if (!id) return "—";
-    return (
-      `<button type="button" class="btn-sm danger lead-delete-btn" ` +
-      `data-lead-id="${escapeHtml(id)}" ` +
-      `data-phone="${escapeHtml(row.phone || "")}" title="حذف من السجل">حذف</button>`
-    );
-  }
-
-  function bindLeadDeleteButtons() {
-    document.querySelectorAll(".lead-delete-btn").forEach((btn) => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = "1";
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.leadId;
-        const phone = btn.dataset.phone || "";
-        if (
-          !window.confirm(
-            `حذف العميل ${phone} من السجل؟\nلا يمكن التراجع عن الحذف.`
-          )
-        ) {
-          return;
-        }
-        btn.disabled = true;
-        try {
-          await api(
-            "/api/leads/" + encodeURIComponent(id) + "/delete",
-            { method: "POST" }
-          );
-          showToast("تم حذف العميل من السجل", true);
-          await loadLeads();
-        } catch (err) {
-          showToast(err.message, false);
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    });
-  }
-
-  function bindOrderNumberInputs() {
-    document.querySelectorAll(".order-num-edit").forEach((wrap) => {
-      const inp = wrap.querySelector(".order-num-input");
-      const btn = wrap.querySelector(".order-num-save");
-      if (!inp || inp.dataset.bound) return;
-      inp.dataset.bound = "1";
-
-      const save = async () => {
-        const id = inp.dataset.leadId || btn?.dataset.leadId;
-        const val = inp.value.trim();
-        if (!id) return;
-        inp.disabled = true;
-        if (btn) btn.disabled = true;
-        try {
-          await api("/api/leads/" + encodeURIComponent(id) + "/order-number", {
-            method: "PATCH",
-            body: JSON.stringify({ orderNumber: val }),
-          });
-          showToast(val ? "تم حفظ رقم الطلب" : "تم مسح رقم الطلب", true);
-          await loadLeads();
-        } catch (err) {
-          showToast(err.message, false);
-        } finally {
-          inp.disabled = false;
-          if (btn) btn.disabled = false;
-        }
-      };
-
-      if (btn) btn.addEventListener("click", save);
-      inp.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          save();
-        }
-      });
-    });
-  }
-
-  function followUpCellHtml(row) {
-    if (row.followUpSentAt) {
-      const when = new Date(row.followUpSentAt).toLocaleString("ar-SA");
-      return (
-        `<span class="followup-status sent" title="${escapeHtml(row.followUpMessage || "تم الإرسال")}">` +
-        `✓ تم · ${escapeHtml(when)}</span>`
-      );
-    }
-
-    const q = row.followUpQueue;
-    if (q) {
-      if (q.status === "pending" || q.status === "processing") {
-        return `<span class="followup-status pending" title="بانتظار البوت">⏳ في الطابور</span>`;
-      }
-      if (q.status === "failed") {
-        const err = q.error ? ` — ${q.error}` : "";
-        const retry =
-          isElectronicLead(row) && can("settings:write")
-            ? ` <button type="button" class="btn-sm btn-secondary lead-followup-btn" data-lead-id="${escapeHtml(row.id || "")}" data-phone="${escapeHtml(row.phone)}" data-wa-id="${escapeHtml(row.waAccountId || selectedLeadsWa || "")}">إعادة</button>`
-            : "";
-        return (
-          `<span class="followup-status failed" title="${escapeHtml(q.error || "فشل الإرسال")}">✗ فشل${escapeHtml(err)}</span>${retry}`
-        );
-      }
-    }
-
-    if (!isElectronicLead(row) || !can("settings:write")) return "—";
+  function crmPhoneCellHtml(row) {
     const waId = row.waAccountId || selectedLeadsWa || "";
+    const paused = Boolean(row.autoReplyPaused);
+    const link =
+      `<a class="phone-link wa-chat-link" href="#" data-phone="${escapeHtml(row.phone)}" data-wa-id="${escapeHtml(waId)}" data-wa-label="${escapeHtml(row.waAccountLabel || "")}" title="فتح المحادثة">${escapeHtml(row.phone)}</a>`;
     return (
-      `<button type="button" class="btn-sm btn-secondary lead-followup-btn" ` +
-      `data-lead-id="${escapeHtml(row.id || "")}" ` +
-      `data-phone="${escapeHtml(row.phone)}" ` +
-      `data-wa-id="${escapeHtml(waId)}">إرسال</button>`
+      `${link}` +
+      `<div class="meta-line">${paused ? '<span class="badge paused">موقوف</span>' : '<span class="badge active">نشط</span>'}</div>` +
+      `<div class="meta-line" style="margin-top:6px">${followupBadgesHtml(row)}</div>`
     );
+  }
+
+  function crmOrderInputHtml(row) {
+    const num = escapeHtml(row.applicationOrderNumber || "");
+    if (!can("settings:write")) return num || "—";
+    return `<input class="order-input" data-lead-id="${escapeHtml(row.id || "")}" type="text" inputmode="numeric" placeholder="101xxxxx" value="${num}" />`;
+  }
+
+  function crmNotesInputHtml(row) {
+    const notes = escapeHtml(row.orderStatusNote || "");
+    if (!can("settings:write")) return notes || "—";
+    return `<textarea class="notes-input" data-lead-id="${escapeHtml(row.id || "")}" rows="2" placeholder="اكتب ملاحظة حرة...">${notes}</textarea>`;
+  }
+
+  function crmActionsHtml(row) {
+    const id = escapeHtml(row.id || "");
+    const phone = escapeHtml(row.phone || "");
+    const paused = Boolean(row.autoReplyPaused);
+    const waId = escapeHtml(row.waAccountId || selectedLeadsWa || "");
+    const canWrite = can("settings:write");
+    const followBtn = canWrite
+      ? `<button class="btn-primary btn-sm" data-act="ask-order" data-lead-id="${id}" data-phone="${phone}" type="button" title="يرسل سؤال التقديم">سؤال عن الطلب</button>`
+      : "";
+    const archiveBtn = canWrite
+      ? `<button class="btn-secondary btn-sm" data-act="${row.archived ? "unarchive" : "archive"}" data-lead-id="${id}" type="button">${row.archived ? "إلغاء الأرشفة" : "أرشفة"}</button>`
+      : "";
+    const pauseBtn =
+      `<button class="btn-sm ${paused ? "btn-primary" : "btn-secondary"} lead-autoreply-btn" data-phone="${phone}" data-wa-id="${waId}" data-paused="${paused ? "1" : "0"}" type="button">${paused ? "تشغيل" : "إيقاف"}</button>`;
+    const delBtn = canWrite
+      ? `<button class="btn-sm danger" data-act="delete" data-lead-id="${id}" data-phone="${phone}" type="button">حذف</button>`
+      : "";
+    return `<div class="actions">${followBtn}${archiveBtn}${pauseBtn}${delBtn}</div>`;
+  }
+
+  function setCustomerTab(day) {
+    customerDay = day || "today";
+    document.querySelectorAll("#customerTabs .crm-tab").forEach((t) => {
+      t.classList.toggle("active", t.dataset.day === customerDay);
+    });
+    const filterRow = $("followupFilterRow");
+    if (filterRow) {
+      filterRow.classList.toggle("hidden", customerDay !== "finance_link");
+    }
+  }
+
+  function updateTabCounts(counts) {
+    const src = counts || {};
+    const set = (id, value) => {
+      const el = $(id);
+      if (el) el.textContent = value == null || value === "" ? "—" : String(value);
+    };
+    set("tab-count-today", src.today);
+    set("tab-count-yesterday", src.yesterday);
+    set("tab-count-all", src.all);
+    set("tab-count-finance_link", src.finance_link);
+    set("tab-count-order_number", src.order_number);
+    set("tab-count-package", src.package);
+    set("tab-count-limit_exhausted", src.limit_exhausted);
+    set("tab-count-service_stop", src.service_stop);
+    set("tab-count-archive", src.archive);
+  }
+
+  function updateLiveCounts(counts, persistence) {
+    const el = $("live-counts");
+    if (!el) return;
+    const all = counts?.all ?? persistence?.count ?? 0;
+    const today = counts?.today ?? "—";
+    const yesterday = counts?.yesterday ?? "—";
+    const disk = persistence?.durable ? "قرص دائم" : "تخزين مؤقت";
+    el.textContent = `العدد المحفوظ: ${all} · اليوم ${today} · أمس ${yesterday} · ${disk}`;
+    el.style.color = Number(all) > 0 ? "var(--ok, #0d6b4c)" : "var(--err, #9d3a2d)";
+    updateTabCounts(counts);
+  }
+
+  function updatePersistenceUi(persistence) {
+    const banner = $("persistenceBanner");
+    const line = $("persistenceLine");
+    if (!persistence) {
+      banner?.classList.add("hidden");
+      if (line) line.textContent = "حالة الحفظ: غير متاحة";
+      return;
+    }
+    banner?.classList.toggle("hidden", Boolean(persistence.durable));
+    if (line) {
+      line.textContent = persistence.durable
+        ? `حالة الحفظ: قرص دائم · ${persistence.count || 0} عميل محفوظ · ${persistence.dataDir || ""}`
+        : `حالة الحفظ: مؤقت (يُمسح بعد إعادة التشغيل/النشر) · ${persistence.count || 0} عميل · ${persistence.dataDir || ""}`;
+      line.style.color = persistence.durable ? "var(--ok, #0d6b4c)" : "var(--err, #9d3a2d)";
+    }
+  }
+
+  function applyBulkFollowupDefaults(pack) {
+    const safe = pack?.outboundSafe || {};
+    const msg = $("followUpMessage");
+    if (msg && !msg.dataset.loaded && pack?.followUpPreview) {
+      msg.value = pack.followUpPreview;
+      msg.dataset.loaded = "1";
+    }
+    const delay = $("bulkFollowUpDelaySec");
+    if (delay && !delay.dataset.touched) {
+      const sec = Math.max(Math.round((safe.delayMs || safe.minDelayMs || 10000) / 1000), 8);
+      delay.value = String(sec);
+      delay.min = "8";
+    }
+    const limit = $("bulkFollowUpLimit");
+    if (limit && !limit.dataset.touched) {
+      limit.value = String(safe.maxBatchSize || 30);
+      limit.max = String(safe.maxBatchSize || 30);
+    }
+    const quota = $("bulkFollowUpQuota");
+    if (quota) {
+      const sent = safe.dailySent ?? 0;
+      const daily = safe.dailyLimit ?? 80;
+      const rem = safe.dailyRemaining ?? Math.max(daily - sent, 0);
+      quota.textContent =
+        `الحصة اليومية: أُرسل ${sent} من ${daily} · المتبقي ${rem}` +
+        ` · تخطّي من توبع خلال ${safe.skipIfFollowedUpWithinHours ?? 20} ساعة`;
+    }
+  }
+
+  function setLeadsMeta(pack, counts) {
+    const shown = leadsCache.length;
+    const total = pack.count || pack.total || shown;
+    const dayLabel =
+      pack.day === "all"
+        ? "كل السجل"
+        : pack.day === "archive"
+          ? "الأرشيف"
+          : OUTCOME_TABS.find((o) => o.id === pack.day)?.label || pack.day || "اليوم";
+    const el = $("leadsSummary");
+    if (el) {
+      el.textContent =
+        `عرض ${shown} من ${total} · ${dayLabel} · ${pack.timezone || "Asia/Riyadh"}` +
+        ` · الكل ${counts.all ?? "—"}` +
+        (counts.today != null ? ` · اليوم ${counts.today}` : "") +
+        (counts.archive != null ? ` · أرشيف ${counts.archive}` : "");
+    }
+    $("loadMoreLeadsBtn")?.classList.toggle("hidden", !leadsHasMore);
+    updateTabCounts(counts);
+  }
+
+  function showLeadsError(msg) {
+    const el = $("leadsErrorBanner");
+    if (!el) return;
+    if (!msg) {
+      el.classList.add("hidden");
+      el.textContent = "";
+      return;
+    }
+    el.classList.remove("hidden");
+    el.textContent = msg;
+  }
+
+  function renderCrmCustomers(rows, counts) {
+    const body = $("leadsTableBody");
+    if (!body) return;
+    const q = String($("customerSearch")?.value || "").trim().toLowerCase();
+    let filtered = !q
+      ? rows.slice()
+      : rows.filter((r) => {
+          const hay = [
+            r.phone,
+            r.applicationOrderNumber,
+            r.workplaceLabel,
+            r.outcomeLabel,
+            r.orderStatusNote,
+            r.employerCompany,
+          ]
+            .join(" ")
+            .toLowerCase();
+          return hay.includes(q);
+        });
+
+    if (customerDay === "finance_link" && followupFilter !== "all") {
+      filtered = filtered.filter((r) => {
+        const sent = followupStatusOf(r).sent;
+        return followupFilter === "sent" ? sent : !sent;
+      });
+    }
+
+    if (!filtered.length) {
+      const all = counts?.all || 0;
+      const tip = all
+        ? " جرّب تبويب «الكل» أو فلتر المتابعة."
+        : " أكمل محادثات على البوت أو استورد بكب.";
+      body.innerHTML = `<tr><td colspan="7" class="empty">لا يوجد عملاء في هذا التبويب.${tip}</td></tr>`;
+      return;
+    }
+
+    body.innerHTML = filtered
+      .map((row) => {
+        return (
+          `<tr>` +
+          `<td data-label="الجوال">${crmPhoneCellHtml(row)}</td>` +
+          `<td data-label="تاريخ الإرسال">${escapeHtml(formatCrmTime(row.at))}</td>` +
+          `<td data-label="جهة العمل">${workplaceChoicesHtml(row)}</td>` +
+          `<td data-label="رقم الطلب">${crmOrderInputHtml(row)}</td>` +
+          `<td data-label="وش صار">${notesChoicesHtml(row)}</td>` +
+          `<td data-label="ملاحظات">${crmNotesInputHtml(row)}</td>` +
+          `<td class="actions" data-label="إجراءات">${crmActionsHtml(row)}</td>` +
+          `</tr>`
+        );
+      })
+      .join("");
+    bindLeadsChatLinks();
   }
 
   async function loadFollowUpTemplate() {
@@ -1127,180 +1070,59 @@
     try {
       const data = await api("/api/leads/followup-template");
       if (data.message) el.value = data.message;
+      applyBulkFollowupDefaults(data);
       el.dataset.loaded = "1";
     } catch (_) {}
   }
 
-  async function queueFollowUpMessage({ leadId, confirmText }) {
-    const message = $("followUpMessage")?.value.trim();
-    if (!message) {
-      showToast("اكتب نص الرسالة أولاً", false);
-      return;
-    }
-    const onlyUnsent = $("followUpOnlyUnsent")?.checked !== false;
-    const wa = selectedLeadsWa;
-
-    const dry = await api("/api/leads/send-followup", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        waAccountId: wa || undefined,
-        leadId: leadId || undefined,
-        onlyUnsent,
-        dryRun: true,
-      }),
-    });
-
-    if (!dry.count) {
-      showToast("لا يوجد عملاء إلكترونيون مطابقون للفلتر", false);
-      return;
-    }
-
-    const prompt =
-      confirmText ||
-      `إرسال الرسالة إلى ${dry.count} عميل؟\n(يجب أن يكون البوت شغّال)`;
-    if (!window.confirm(prompt)) return;
-
-    const res = await api("/api/leads/send-followup", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        waAccountId: wa || undefined,
-        leadId: leadId || undefined,
-        onlyUnsent,
-        dryRun: false,
-      }),
-    });
-
-    showToast(
-      `تمت إضافة ${res.queued || 0} رسالة للطابور — يرسلها البوت خلال ثوانٍ`,
-      true
-    );
-    await loadLeads();
-  }
-
-  function bindLeadFollowUpButtons() {
-    document.querySelectorAll(".lead-followup-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        try {
-          await queueFollowUpMessage({
-            leadId: btn.dataset.leadId,
-            confirmText: `إرسال رسالة متابعة إلى ${btn.dataset.phone}؟`,
-          });
-        } catch (err) {
-          showToast(err.message, false);
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    });
-  }
-
-  function getLeadsPhoneSearch() {
-    return String($("leadsPhoneSearch")?.value || "").trim();
-  }
-
-  function getLeadsOrderSearch() {
-    return String($("leadsOrderSearch")?.value || "").trim();
-  }
-
-  function getLeadsMarkFilter() {
-    return String($("leadsMarkFilter")?.value || "").trim();
-  }
-
-  function filterLeadsByManualMark(leads, markFilter) {
-    const list = Array.isArray(leads) ? leads : [];
-    if (!markFilter) return list;
-    if (markFilter === "none") return list.filter((r) => !r.manualMark);
-    return list.filter((r) => r.manualMark === markFilter);
-  }
-
-  function updateLeadsSearchClearBtns() {
-    const phoneBtn = $("leadsPhoneSearchClear");
-    const orderBtn = $("leadsOrderSearchClear");
-    if (phoneBtn) phoneBtn.classList.toggle("hidden", !getLeadsPhoneSearch());
-    if (orderBtn) orderBtn.classList.toggle("hidden", !getLeadsOrderSearch());
-  }
-
-  async function loadLeads() {
+  async function loadLeads({ append = false } = {}) {
     if (!can("stats:read")) return;
     await loadFollowUpTemplate();
     await syncWaLeadTabsFromApi();
     const tbody = $("leadsTableBody");
-    const filter = $("leadsFilter")?.value || "";
-    const appFilter = $("leadsAppFilter")?.value || "";
-    const markFilter = getLeadsMarkFilter();
-    const phoneSearch = getLeadsPhoneSearch();
-    const orderSearch = getLeadsOrderSearch();
-    const wa = selectedLeadsWa;
     initLeadsWaSelect();
-    updateLeadsSearchClearBtns();
-    tbody.innerHTML = "<tr><td colspan='14'>جاري التحميل…</td></tr>";
-
-    const phoneDigits = phoneSearch.replace(/\D/g, "");
-    const orderDigits = orderSearch.replace(/\D/g, "");
-    if (phoneSearch && phoneDigits.length > 0 && phoneDigits.length < 3) {
-      tbody.innerHTML =
-        "<tr><td colspan='14'>أدخل 3 أرقام على الأقل لبحث الجوال (مثال: 2285 أو 0555162285)</td></tr>";
-      return;
+    if (!append && tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">جاري تحميل العملاء...</td></tr>`;
     }
-    if (orderSearch && orderDigits.length > 0 && orderDigits.length < 3) {
-      tbody.innerHTML =
-        "<tr><td colspan='14'>أدخل 3 أرقام على الأقل لبحث الطلب (مثال: 101 أو 10123456789)</td></tr>";
-      return;
-    }
-
+    const wa = selectedLeadsWa;
+    const q = String($("customerSearch")?.value || "").trim();
+    const offset = append ? leadsCache.length : 0;
     try {
-      const searchActive = phoneDigits.length >= 3 || orderDigits.length >= 3;
-      const markFilterActive = Boolean(markFilter);
       const params = new URLSearchParams({
-        limit: searchActive || markFilterActive ? "500" : "200",
+        day: customerDay,
+        limit: String(LEADS_PAGE_SIZE),
+        offset: String(offset),
       });
-      if (filter) params.set("status", filter);
-      if (appFilter) params.set("applicationMethod", appFilter);
-      if (markFilter) params.set("manualMark", markFilter);
       if (wa) params.set("waAccountId", wa);
-      if (phoneDigits.length >= 3) params.set("phoneSearch", phoneSearch);
-      if (orderDigits.length >= 3) params.set("orderNumberSearch", orderSearch);
-      const data = await api("/api/leads?" + params.toString());
-      const leads = filterLeadsByManualMark(data.leads || [], markFilter);
-      const c = data.counts || {};
-      const ac = data.applicationCounts || {};
-      const mc = data.manualMarkCounts || {};
-      const waLabel = wa
-        ? WA_LEADS_TABS.find((a) => a.waAccountId === wa)?.label || wa
-        : "الكل";
-      let countsText = "";
-      if (data.phoneSearch || data.orderNumberSearch) {
-        const parts = [];
-        if (data.phoneSearch) parts.push(`جوال «${data.phoneSearch}»`);
-        if (data.orderNumberSearch) parts.push(`طلب «${data.orderNumberSearch}»`);
-        countsText = `نتائج البحث (${parts.join(" + ")}): ${data.total || 0} سجل`;
-        if (!wa) countsText += " — (تبويب الكل)";
-      } else {
-        countsText =
-          `${waLabel} — تمويل شخصي: ${c.personal_finance || 0} · عرض بديل: ${c.combo_offer || 0} · مرفوض: ${c.rejected || 0} · عقاري: ${c.property || 0} · إيقاف خدمات: ${c.service_stop || 0} · أخرى: ${c.qualified || 0}`;
-        countsText += ` · إلكتروني: ${ac.electronic || 0} · فرع: ${ac.branch || 0} · باقة: ${ac.combo || 0}`;
-        countsText += ` · ⏳ ${mc.waiting || 0} · ★ ${mc.reminder || 0} · ✓ ${mc.done || 0} · ✕ ${mc.rejected || 0}`;
-        if (markFilter) {
-          const markLabels = {
-            waiting: "انتظار (برتقالي)",
-            reminder: "تذكير (بنفسجي)",
-            done: "منفذ (أخضر)",
-            rejected: "مرفوض (أحمر)",
-            none: "بدون علامة",
-          };
-          countsText = `عرض ${leads.length} عميل فقط — علامة: ${markLabels[markFilter] || markFilter}`;
-        }
+      if (q) params.set("q", q);
+      if (customerDay === "finance_link" && followupFilter !== "all") {
+        params.set("followupFilter", followupFilter);
       }
-      const summaryEl = $("leadsSummary");
-      if (summaryEl) {
-        summaryEl.textContent = countsText;
-        summaryEl.classList.toggle("hidden", !countsText);
+      let pack = await api("/api/leads?" + params.toString());
+      if (
+        !append &&
+        customerDay === "today" &&
+        !(pack.leads || []).length &&
+        (pack.tabCounts?.all || pack.counts?.all || 0) > 0
+      ) {
+        setCustomerTab("all");
+        params.set("day", "all");
+        params.set("offset", "0");
+        pack = await api("/api/leads?" + params.toString());
       }
+      const page = pack.leads || [];
+      leadsCache = append ? leadsCache.concat(page) : page;
+      leadsHasMore = Boolean(pack.hasMore);
+      lastLeadsPack = pack;
+      const counts = pack.tabCounts || pack.counts || {};
+      if (pack.persistence) updatePersistenceUi(pack.persistence);
+      updateLiveCounts(counts, pack.persistence);
+      applyBulkFollowupDefaults(pack);
+      setLeadsMeta(pack, counts);
+      renderCrmCustomers(leadsCache, counts);
+      showLeadsError("");
 
-      const fq = data.followUpQueue || {};
+      const fq = pack.followUpQueue || {};
       const statusEl = $("leadsFollowUpStatus");
       if (statusEl && can("settings:write")) {
         if (fq.waiting || fq.sent || fq.failed) {
@@ -1309,118 +1131,314 @@
             `<strong>حالة المتابعة:</strong> ` +
             `⏳ ${fq.waiting || 0} في الطابور · ` +
             `✓ ${fq.sent || 0} أُرسلت · ` +
-            `✗ ${fq.failed || 0} فشل · ` +
-            `<span class="muted">حدّث الجدول بعد دقيقة لمتابعة الإرسال</span>`;
-        } else {
+            `✗ ${fq.failed || 0} فشل`;
+        } else if (!statusEl.dataset.keep) {
           statusEl.classList.add("hidden");
-          statusEl.textContent = "";
         }
       }
-
-      leadsNoteById.clear();
-      for (const row of leads) {
-        if (row.id) leadsNoteById.set(row.id, row.orderStatusNote || "");
-      }
-
-      const markBar = $("leadsMarkFilter")?.closest(".filter-bar");
-      if (markBar) markBar.classList.toggle("mark-filter-active", markFilterActive);
-
-      if (!leads.length) {
-        let emptyMsg = wa
-          ? "لا توجد سجلات لهذا الجوال بعد — العملاء الجدد يُسجّلون تلقائياً عند التأهيل/الرفض على نافذة البوت نفسها"
-          : "لا توجد سجلات — أكمل محادثات على البوت";
-        if (data.phoneSearch || data.orderNumberSearch) {
-          if (data.orderNumberSearch && data.phoneSearch) {
-            emptyMsg = `لا يوجد سجل يطابق الجوال «${data.phoneSearch}» ورقم الطلب «${data.orderNumberSearch}»`;
-          } else if (data.orderNumberSearch) {
-            emptyMsg = wa
-              ? `لا يوجد رقم طلب «${data.orderNumberSearch}» في سجل ${waLabel} — جرّب تبويب «الكل»`
-              : `لا يوجد رقم طلب «${data.orderNumberSearch}» في السجل`;
-          } else {
-            emptyMsg = wa
-              ? `لا يوجد عميل برقم «${data.phoneSearch}» في سجل ${waLabel} — جرّب تبويب «الكل»`
-              : `لا يوجد عميل برقم «${data.phoneSearch}» في السجل`;
-          }
-        } else if (markFilter) {
-          const markLabels = {
-            waiting: "انتظار (برتقالي)",
-            reminder: "تذكير (بنفسجي)",
-            done: "منفذ (أخضر)",
-            rejected: "مرفوض (أحمر)",
-            none: "بدون علامة",
-          };
-          emptyMsg = `لا يوجد عميل بعلامة «${markLabels[markFilter] || markFilter}» ضمن الفلاتر الحالية`;
-        }
-        tbody.innerHTML = `<tr><td colspan='14'>${escapeHtml(emptyMsg)}</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = leads
-        .map((row) => {
-          const when = row.at ? new Date(row.at).toLocaleString("ar-SA") : "—";
-          const waId = row.waAccountId || selectedLeadsWa || "";
-          const st = row.status || "qualified";
-          return (
-            `<tr class="${leadRowClasses(row, searchActive)}">` +
-            `<td>${leadPhoneCellHtml(row, waId)}</td>` +
-            `<td>${escapeHtml(row.waAccountLabel || row.waAccountId || "—")}</td>` +
-            `<td><span class="badge-status ${st}">${escapeHtml(row.statusLabel || st)}</span></td>` +
-            `<td>${escapeHtml(when)}</td>` +
-            `<td>${escapeHtml(row.inquiryType || "—")}</td>` +
-            `<td>${escapeHtml(row.sector || "—")}</td>` +
-            `<td>${escapeHtml(row.realEstate || (row.comboPackage ? "باقة عقارية" : "—"))}</td>` +
-            `<td>${escapeHtml(formatAmount(row.amount))}</td>` +
-            `<td>${escapeHtml(appLabel(row))}</td>` +
-            `<td>${orderNumberCellHtml(row)}</td>` +
-            `<td>${statusNoteCellHtml(row)}</td>` +
-            `<td>${followUpCellHtml(row)}</td>` +
-            `<td>${escapeHtml(contactLabel(row))}</td>` +
-            `<td>${leadDeleteCellHtml(row)}</td>` +
-            "</tr>"
-          );
-        })
-        .join("");
-      bindLeadsChatLinks();
-      bindLeadManualMarkButtons();
-      bindLeadFollowUpButtons();
-      bindOrderNumberInputs();
-      bindLeadNoteButtons();
-      bindLeadDeleteButtons();
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="14">${escapeHtml(err.message)}</td></tr>`;
+      showLeadsError(err.message);
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(err.message)}</td></tr>`;
+      }
     }
   }
 
-  $("leadsFilter")?.addEventListener("change", loadLeads);
-  $("leadsAppFilter")?.addEventListener("change", loadLeads);
-  $("leadsMarkFilter")?.addEventListener("change", loadLeads);
-  $("refreshLeadsBtn")?.addEventListener("click", loadLeads);
-  $("leadsSearchBtn")?.addEventListener("click", loadLeads);
-  $("leadsPhoneSearchClear")?.addEventListener("click", () => {
-    const input = $("leadsPhoneSearch");
-    if (input) input.value = "";
-    updateLeadsSearchClearBtns();
-    loadLeads();
-  });
-  $("leadsOrderSearchClear")?.addEventListener("click", () => {
-    const input = $("leadsOrderSearch");
-    if (input) input.value = "";
-    updateLeadsSearchClearBtns();
-    loadLeads();
-  });
-  for (const id of ["leadsPhoneSearch", "leadsOrderSearch"]) {
-    $(id)?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        loadLeads();
-      }
+  async function queueFollowUpMessage({ leadId, confirmText, delayMs, limit }) {
+    const message = $("followUpMessage")?.value.trim();
+    if (!message) {
+      showToast("اكتب نص الرسالة أولاً", false);
+      return;
+    }
+    const wa = selectedLeadsWa;
+    const dry = await api("/api/leads/send-followup", {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        waAccountId: wa || undefined,
+        leadId: leadId || undefined,
+        onlyUnsent: !leadId,
+        dryRun: true,
+        delayMs,
+        limit,
+      }),
+    });
+    if (!dry.count) {
+      showToast("لا يوجد عملاء «أخذ رابط التمويل» مطابقون", false);
+      return;
+    }
+    const prompt =
+      confirmText ||
+      `إرسال الرسالة إلى ${dry.count} عميل؟\n(يجب أن يكون البوت شغّال)`;
+    if (!window.confirm(prompt)) return;
+    const res = await api("/api/leads/send-followup", {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        waAccountId: wa || undefined,
+        leadId: leadId || undefined,
+        onlyUnsent: !leadId,
+        dryRun: false,
+        delayMs,
+        limit,
+      }),
+    });
+    showToast(
+      `تمت إضافة ${res.queued || res.sent || 0} رسالة للطابور` +
+        (res.skipped ? ` · تخطّي ${res.skipped}` : "") +
+        (res.dailyRemaining != null ? ` · متبقي اليوم ${res.dailyRemaining}` : ""),
+      true
+    );
+    await loadLeads();
+  }
+
+  async function saveCrmField(leadId, path, body) {
+    if (!leadId) return;
+    await api("/api/leads/" + encodeURIComponent(leadId) + path, {
+      method: "PATCH",
+      body: JSON.stringify(body),
     });
   }
+
+  $("customerTabs")?.addEventListener("click", async (e) => {
+    const tab = e.target.closest(".crm-tab");
+    if (!tab) return;
+    setCustomerTab(tab.dataset.day);
+    await loadLeads().catch((err) => showLeadsError(err.message));
+  });
+
+  $("followupFilterRow")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-followup-filter]");
+    if (!btn) return;
+    followupFilter = btn.dataset.followupFilter || "all";
+    document.querySelectorAll(".followup-filter").forEach((b) => {
+      b.classList.toggle("active", b === btn);
+      b.classList.toggle("btn-primary", b === btn);
+      b.classList.toggle("btn-secondary", b !== btn);
+    });
+    renderCrmCustomers(leadsCache, lastLeadsPack?.tabCounts || lastLeadsPack?.counts || {});
+  });
+
+  let searchTimer = null;
+  $("customerSearch")?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      renderCrmCustomers(leadsCache, lastLeadsPack?.tabCounts || lastLeadsPack?.counts || {});
+    }, 180);
+  });
+
+  $("refreshLeadsBtn")?.addEventListener("click", () => loadLeads());
+  $("loadMoreLeadsBtn")?.addEventListener("click", () => loadLeads({ append: true }));
+
+  $("copyTodayPhonesBtn")?.addEventListener("click", async () => {
+    try {
+      const params = new URLSearchParams({ day: "today", phonesOnly: "1" });
+      if (selectedLeadsWa) params.set("waAccountId", selectedLeadsWa);
+      const pack = await api("/api/leads?" + params.toString());
+      const phones = (pack.phones || []).map((r) => r.phone).join("\n");
+      await navigator.clipboard.writeText(phones || "");
+      showToast(phones ? `تم نسخ ${pack.count} رقم` : "لا توجد أرقام اليوم", Boolean(phones));
+    } catch (err) {
+      showToast(err.message, false);
+    }
+  });
+
+  $("exportLeadsBtn")?.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/leads/export", { headers: headers(false) });
+      if (!res.ok) throw new Error("فشل التنزيل");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `customers-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      const st = $("backupStatus");
+      if (st) {
+        st.classList.remove("hidden");
+        st.textContent = "تم تنزيل ملف البكب — احفظه عندك قبل أي نشر";
+      }
+    } catch (err) {
+      showToast(err.message, false);
+    }
+  });
+
+  $("backupNowBtn")?.addEventListener("click", async () => {
+    try {
+      const r = await api("/api/leads/backup", { method: "POST", body: "{}" });
+      const st = $("backupStatus");
+      if (st) {
+        st.classList.remove("hidden");
+        st.textContent = `تم الحفظ: ${r.count || r.summary?.counts?.all || 0} عميل`;
+      }
+      await loadLeads();
+    } catch (err) {
+      showToast(err.message, false);
+    }
+  });
+
+  $("importLeadsBtn")?.addEventListener("click", async () => {
+    try {
+      const raw = $("importLeadsJson")?.value.trim();
+      if (!raw) throw new Error("الصق محتوى ملف البكب أولًا");
+      const payload = JSON.parse(raw);
+      const r = await api("/api/leads/import", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const st = $("backupStatus");
+      if (st) {
+        st.classList.remove("hidden");
+        st.textContent = `تم الاستيراد: جديد ${r.imported || 0} · محدّث ${r.updated || 0} · الإجمالي ${r.total || 0}`;
+      }
+      setCustomerTab("all");
+      await loadLeads();
+    } catch (err) {
+      showToast(err.message, false);
+    }
+  });
+
+  $("leadsTableBody")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const leadId = btn.dataset.leadId;
+    try {
+      if (act === "workplace") {
+        const row = leadsCache.find((r) => r.id === leadId) || {};
+        const next = row.workplace === btn.dataset.workplace ? "clear" : btn.dataset.workplace;
+        await saveCrmField(leadId, "/workplace", { workplace: next });
+        await loadLeads();
+        return;
+      }
+      if (act === "outcome") {
+        const row = leadsCache.find((r) => r.id === leadId) || {};
+        const next = row.outcome === btn.dataset.outcome ? "" : btn.dataset.outcome;
+        await saveCrmField(leadId, "/outcome", { outcome: next });
+        await loadLeads();
+        return;
+      }
+      if (act === "ask-order") {
+        btn.disabled = true;
+        await queueFollowUpMessage({
+          leadId,
+          confirmText: `إرسال سؤال التقديم إلى ${btn.dataset.phone}؟`,
+        });
+        btn.disabled = false;
+        return;
+      }
+      if (act === "archive" || act === "unarchive") {
+        await api("/api/leads/" + encodeURIComponent(leadId) + (act === "archive" ? "/archive" : "/unarchive"), {
+          method: "POST",
+          body: JSON.stringify({ archived: act === "archive" }),
+        });
+        await loadLeads();
+        return;
+      }
+      if (act === "delete") {
+        if (!window.confirm(`حذف العميل ${btn.dataset.phone || ""} من السجل؟\nلا يمكن التراجع.`)) return;
+        await api("/api/leads/" + encodeURIComponent(leadId) + "/delete", { method: "POST" });
+        showToast("تم حذف العميل من السجل", true);
+        await loadLeads();
+      }
+    } catch (err) {
+      showToast(err.message, false);
+      btn.disabled = false;
+    }
+  });
+
+  $("leadsTableBody")?.addEventListener("focusout", async (e) => {
+    const notes = e.target.closest("textarea.notes-input");
+    if (notes) {
+      const leadId = notes.dataset.leadId;
+      const current = (leadsCache.find((r) => r.id === leadId) || {}).orderStatusNote || "";
+      if (String(notes.value || "") === current) return;
+      notes.disabled = true;
+      try {
+        await saveCrmField(leadId, "/status-note", { note: notes.value });
+        const row = leadsCache.find((r) => r.id === leadId);
+        if (row) row.orderStatusNote = notes.value;
+        notes.style.borderColor = "var(--accent)";
+        setTimeout(() => {
+          notes.style.borderColor = "";
+        }, 700);
+      } catch (err) {
+        showToast(err.message, false);
+      } finally {
+        notes.disabled = false;
+      }
+      return;
+    }
+    const order = e.target.closest("input.order-input");
+    if (order) {
+      const leadId = order.dataset.leadId;
+      const val = String(order.value || "").replace(/\D/g, "");
+      const current = (leadsCache.find((r) => r.id === leadId) || {}).applicationOrderNumber || "";
+      if (val === current) return;
+      order.disabled = true;
+      try {
+        await saveCrmField(leadId, "/order-number", { orderNumber: val });
+        showToast(val ? "تم حفظ رقم الطلب" : "تم مسح رقم الطلب", true);
+        await loadLeads();
+      } catch (err) {
+        showToast(err.message, false);
+        order.value = current;
+      } finally {
+        order.disabled = false;
+      }
+    }
+  });
+
+  $("leadsTableBody")?.addEventListener("keydown", (e) => {
+    const notes = e.target.closest("textarea.notes-input");
+    if (notes && e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      notes.blur();
+      return;
+    }
+    const order = e.target.closest("input.order-input");
+    if (order && e.key === "Enter") {
+      e.preventDefault();
+      order.blur();
+    }
+  });
+
+  ["bulkFollowUpDelaySec", "bulkFollowUpLimit", "followUpMessage"].forEach((id) => {
+    $(id)?.addEventListener("input", () => {
+      $(id).dataset.touched = "1";
+    });
+  });
+
+  $("refreshFollowUpQuotaBtn")?.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/leads/followup-template");
+      applyBulkFollowupDefaults(data);
+      const st = $("leadsFollowUpStatus");
+      if (st) {
+        st.classList.remove("hidden");
+        st.dataset.keep = "1";
+        st.textContent = "تم تحديث الحصة والإعدادات";
+      }
+    } catch (err) {
+      showToast(err.message, false);
+    }
+  });
+
   $("sendFollowUpBtn")?.addEventListener("click", async () => {
     const btn = $("sendFollowUpBtn");
+    const delaySec = Math.max(Number($("bulkFollowUpDelaySec")?.value || 10), 8);
+    const limit = Math.min(Math.max(Number($("bulkFollowUpLimit")?.value || 30), 1), 30);
     btn.disabled = true;
     try {
-      await queueFollowUpMessage({});
+      await queueFollowUpMessage({
+        delayMs: delaySec * 1000,
+        limit,
+        confirmText:
+          `إرسال متابعة جماعية لعملاء «أخذ رابط التمويل»؟\n` +
+          `التأخير: ${delaySec} ثانية · حد الدفعة: ${limit}\n` +
+          `سيُتخطى من أُرسلت له متابعة مؤخرًا.`,
+      });
     } catch (err) {
       showToast(err.message, false);
     } finally {
@@ -1428,6 +1446,12 @@
     }
   });
 
+  try {
+    const backupPanel = $("backupPanel");
+    if (backupPanel && window.matchMedia("(max-width: 720px)").matches) {
+      backupPanel.open = false;
+    }
+  } catch (_) {}
   let waPollTimer = null;
   let selectedWaAccountId = null;
   const WA_STATUS_LABELS = {
@@ -2157,7 +2181,8 @@
     return String(s || "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function formatDate(iso) {

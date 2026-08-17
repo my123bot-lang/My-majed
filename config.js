@@ -290,6 +290,10 @@ module.exports = {
     electronicMessage: `السلام عليكم
 هل قدمت تمويل؟
 أرسل رقم الطلب (يبدأ بـ 101).`,
+    skipIfFollowedUpWithinHours: 20,
+    dailyLimit: 80,
+    minDelayMs: 8000,
+    maxBatchSize: 30,
   },
 
   /** تأخير بين رسائل المتابعة الصادرة من اللوحة (مللي ثانية) */

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>لوحة تحكم — ماجد</title>
-  <link rel="stylesheet" href="/admin.css?v=3" />
+  <link rel="stylesheet" href="/admin.css?v=4" />
 </head>
 <body>
 
@@ -75,7 +75,7 @@
       <nav class="nav">
         <button type="button" class="nav-item active" data-page="home" id="navHome"><span class="nav-icon">🏠</span><span>الرئيسية</span></button>
         <button type="button" class="nav-item" data-page="stats" id="navStats"><span class="nav-icon">📊</span><span>الإحصائية</span></button>
-        <button type="button" class="nav-item" data-page="leads" id="navLeads"><span class="nav-icon">👥</span><span>سجل العملاء</span></button>
+        <button type="button" class="nav-item" data-page="leads" id="navLeads"><span class="nav-icon">👥</span><span>العملاء</span></button>
         <button type="button" class="nav-item" data-page="settings" id="navSettings"><span class="nav-icon">📞</span><span>بيانات التواصل</span></button>
         <button type="button" class="nav-item hidden" data-page="users" id="navUsers"><span class="nav-icon">🔐</span><span>المستخدمون</span></button>
         <button type="button" class="nav-item hidden" data-page="whatsapp" id="navWhatsapp"><span class="nav-icon">📱</span><span>الجوالات</span></button>
@@ -185,139 +185,127 @@
 
       <!-- سجل العملاء -->
       <section id="page-leads" class="page">
-        <div class="page-header">
-          <h1>سجل العملاء</h1>
-          <p>سجل عملاء بوت ماجد</p>
+        <div class="page-header crm-topbar">
+          <div>
+            <p class="brand-mark">ماجد</p>
+            <h1>العملاء</h1>
+            <p id="live-counts" class="muted crm-live-counts">العدد المحفوظ: —</p>
+          </div>
+          <button type="button" class="btn-secondary" id="refreshLeadsBtn">تحديث</button>
         </div>
-        <div class="card">
-          <div class="card panel-accent hidden" id="leadsFollowUpCard">
-            <h3 style="margin:0 0 8px;font-size:1rem;">متابعة التقديم الإلكتروني</h3>
-            <p class="hint" style="margin:0 0 12px;">أرسل رسالة لكل عميل اختار «إلكتروني» — تُرسل عبر نافذة بوت ماجد. تأكد أن البوت شغّال.</p>
-            <label for="followUpMessage">نص الرسالة</label>
-            <textarea id="followUpMessage" rows="4" placeholder="السلام عليكم&#10;هل قدمت تمويل؟&#10;وكم رقم الطلب؟"></textarea>
-            <label style="display:flex;align-items:center;gap:8px;margin:12px 0 14px;font-weight:600;">
-              <input type="checkbox" id="followUpOnlyUnsent" checked />
-              فقط من لم تُرسل لهم رسالة متابعة سابقاً
+
+        <div id="leadsErrorBanner" class="crm-error-banner hidden"></div>
+
+        <div id="persistenceBanner" class="card crm-persist-banner hidden">
+          <h3>التخزين مؤقت — يتصفر بعد إعادة التشغيل</h3>
+          <p class="muted" id="persistenceBannerText">
+            أضف Persistent Disk في Render على المسار <code>/var/data</code>
+            ثم Environment: <code>CUSTOMERS_DATA_DIR=/var/data/majed</code>. قبل أي نشر: نزّل بكب.
+          </p>
+        </div>
+
+        <details class="card backup-panel" id="backupPanel" open>
+          <summary>النسخ الاحتياطي وجلب السابق</summary>
+          <div>
+            <p class="muted">قبل أي نشر جديد: نزّل بكب. بعد النشر: استورد الملف.</p>
+            <p class="muted" id="persistenceLine">حالة الحفظ: —</p>
+            <div class="btn-row">
+              <button type="button" class="btn-primary" id="exportLeadsBtn">تنزيل بكب</button>
+              <button type="button" class="btn-secondary" id="backupNowBtn">حفظ نسخة الآن</button>
+            </div>
+            <label class="field" style="margin-top:14px">
+              <span>استيراد بكب (الصق محتوى ملف JSON)</span>
+              <textarea id="importLeadsJson" rows="4" placeholder='{"leads":[...]}'></textarea>
             </label>
-            <button type="button" class="btn-primary" id="sendFollowUpBtn">إرسال للإلكترونيين (حسب الفلتر والجوال)</button>
-            <p class="muted hidden" id="leadsFollowUpStatus" style="margin:12px 0 0;line-height:1.7;"></p>
-            <p class="hint" style="margin:10px 0 0;font-size:0.85rem;">
-              <strong>كيف تعرف حالة الإرسال؟</strong>
-              عمود «متابعة» في الجدول:
-              <span class="followup-status pending">⏳ في الطابور</span> =
-              بانتظار البوت ·
-              <span class="followup-status sent">✓ تم</span> =
-              وصلت للعميل ·
-              <span class="followup-status failed">✗ فشل</span> =
-              البوت غير شغّال أو رقم غير صالح
-            </p>
+            <button type="button" class="btn-secondary" id="importLeadsBtn">استيراد ودمج</button>
+            <p id="backupStatus" class="crm-status hidden"></p>
           </div>
-          <div class="filter-bar">
-            <label for="leadsWaSelect" style="margin:0;">اسم المستخدم:</label>
-            <select id="leadsWaSelect" title="حساب ماجد أو الكل">
-              <option value="">الكل</option>
-            </select>
-            <label for="leadsFilter" style="margin:0;">الحالة:</label>
-            <select id="leadsFilter">
-              <option value="">الكل</option>
-              <option value="personal_finance">تمويل شخصي</option>
-              <option value="qualified">مؤهل (أخرى)</option>
-              <option value="combo_offer">مؤهل — أخذ عرض بديل</option>
-              <option value="rejected">مرفوض</option>
-              <option value="property">عقاري</option>
-              <option value="service_stop">إيقاف خدمات</option>
-            </select>
-            <label for="leadsAppFilter" style="margin:0;">التقديم:</label>
-            <select id="leadsAppFilter">
-              <option value="">الكل</option>
-              <option value="electronic">إلكتروني (رفع أونلاين)</option>
-              <option value="branch">زيارة الفرع</option>
-              <option value="combo">باقة (عقاري + شخصي)</option>
-            </select>
-            <label for="leadsMarkFilter" style="margin:0;">العلامة:</label>
-            <select id="leadsMarkFilter" title="فرز حسب لون العلامة اليدوية">
-              <option value="">الكل</option>
-              <option value="waiting">⏳ انتظار (برتقالي)</option>
-              <option value="reminder">★ تذكير (بنفسجي)</option>
-              <option value="done">✓ منفذ (أخضر)</option>
-              <option value="rejected">✕ مرفوض (أحمر)</option>
-              <option value="none">○ بدون علامة</option>
-            </select>
-            <button type="button" class="btn-secondary" id="refreshLeadsBtn" style="margin:0;">تحديث</button>
+        </details>
+
+        <div class="card panel-accent hidden" id="leadsFollowUpCard">
+          <h3 style="margin:0 0 8px;font-size:1.05rem;">متابعة جماعية — أخذ رابط التمويل</h3>
+          <p class="hint" style="margin:0 0 12px;">
+            يرسل فقط لعملاء «أخذ رابط التمويل»، بتأخير آمن وحد يومي لتقليل خطر الحظر.
+            تأكد أن البوت شغّال.
+          </p>
+          <label for="followUpMessage">نص الرسالة</label>
+          <textarea id="followUpMessage" rows="4" placeholder="السلام عليكم&#10;هل قدمت تمويل؟&#10;أرسل رقم الطلب (يبدأ بـ 101)."></textarea>
+          <div class="btn-row crm-followup-fields">
+            <label class="field">
+              <span>التأخير بين الرسائل (ثانية) — الأقل 8</span>
+              <input id="bulkFollowUpDelaySec" type="number" min="8" step="1" value="10" />
+            </label>
+            <label class="field">
+              <span>حد الدفعة (أقصى 30)</span>
+              <input id="bulkFollowUpLimit" type="number" min="1" max="30" step="1" value="30" />
+            </label>
           </div>
-          <div id="leadsSummary" class="leads-summary muted"></div>
-          <div class="leads-search-bar">
-            <div class="leads-search-group">
-              <label for="leadsPhoneSearch">بحث برقم الجوال</label>
-              <input
-                type="search"
-                id="leadsPhoneSearch"
-                placeholder="05xxxxxxxx أو آخر الأرقام"
-                dir="ltr"
-                autocomplete="off"
-              />
-              <button type="button" class="btn-secondary hidden" id="leadsPhoneSearchClear">مسح</button>
+          <p class="muted" id="bulkFollowUpQuota">الحصة اليومية: —</p>
+          <div class="btn-row">
+            <button type="button" class="btn-primary" id="sendFollowUpBtn">إرسال متابعة جماعية</button>
+            <button type="button" class="btn-secondary" id="refreshFollowUpQuotaBtn">تحديث الحصة</button>
+          </div>
+          <p class="muted hidden" id="leadsFollowUpStatus" style="margin:12px 0 0;line-height:1.7;"></p>
+        </div>
+
+        <div class="crm-toolbar">
+          <div class="crm-tabs" id="customerTabs">
+            <button class="crm-tab active" data-day="today" type="button"><span class="tab-label">اليوم</span><span class="tab-count" id="tab-count-today">—</span></button>
+            <button class="crm-tab" data-day="yesterday" type="button"><span class="tab-label">أمس</span><span class="tab-count" id="tab-count-yesterday">—</span></button>
+            <button class="crm-tab" data-day="all" type="button"><span class="tab-label">الكل</span><span class="tab-count" id="tab-count-all">—</span></button>
+            <button class="crm-tab" data-day="finance_link" type="button"><span class="tab-label">أخذ رابط التمويل</span><span class="tab-count" id="tab-count-finance_link">—</span></button>
+            <button class="crm-tab" data-day="order_number" type="button"><span class="tab-label">رقم طلب</span><span class="tab-count" id="tab-count-order_number">—</span></button>
+            <button class="crm-tab" data-day="package" type="button"><span class="tab-label">أخذ باقة</span><span class="tab-count" id="tab-count-package">—</span></button>
+            <button class="crm-tab" data-day="limit_exhausted" type="button"><span class="tab-label">مستنفذ حد</span><span class="tab-count" id="tab-count-limit_exhausted">—</span></button>
+            <button class="crm-tab" data-day="service_stop" type="button"><span class="tab-label">إيقاف خدمات</span><span class="tab-count" id="tab-count-service_stop">—</span></button>
+            <button class="crm-tab" data-day="archive" type="button"><span class="tab-label">أرشيف</span><span class="tab-count" id="tab-count-archive">—</span></button>
+          </div>
+          <input id="customerSearch" class="crm-search" type="search" placeholder="بحث برقم الجوال أو الطلب أو جهة العمل أو وش صار أو ملاحظة" />
+        </div>
+        <div class="btn-row hidden" id="followupFilterRow">
+          <button type="button" class="btn-secondary btn-sm followup-filter active" data-followup-filter="all">الكل</button>
+          <button type="button" class="btn-secondary btn-sm followup-filter" data-followup-filter="pending">لم تُرسل متابعة</button>
+          <button type="button" class="btn-secondary btn-sm followup-filter" data-followup-filter="sent">تمت المتابعة</button>
+        </div>
+
+        <div class="card">
+          <div class="crm-toolbar">
+            <p class="muted" id="leadsSummary" style="margin:0">—</p>
+            <div class="btn-row">
+              <label class="crm-wa-filter">
+                <span>الجوال</span>
+                <select id="leadsWaSelect" title="حساب ماجد أو الكل">
+                  <option value="">الكل</option>
+                </select>
+              </label>
+              <button type="button" class="btn-secondary btn-sm" id="copyTodayPhonesBtn">نسخ أرقام اليوم</button>
+              <button type="button" class="btn-secondary btn-sm hidden" id="loadMoreLeadsBtn">تحميل المزيد</button>
             </div>
-            <div class="leads-search-group">
-              <label for="leadsOrderSearch">بحث برقم الطلب</label>
-              <input
-                type="search"
-                id="leadsOrderSearch"
-                placeholder="101… (كامل أو جزء)"
-                dir="ltr"
-                autocomplete="off"
-              />
-              <button type="button" class="btn-secondary hidden" id="leadsOrderSearchClear">مسح</button>
-            </div>
-            <button type="button" class="btn-primary" id="leadsSearchBtn">بحث</button>
           </div>
-          <div class="table-wrap">
-            <table class="data-table">
+          <div class="table-wrap crm-table-wrap">
+            <table class="data-table crm-table">
               <thead>
                 <tr>
-                  <th>رقم العميل</th>
-                  <th>واتساب البوت</th>
-                  <th>الحالة</th>
-                  <th>التاريخ</th>
-                  <th>الاستفسار</th>
-                  <th>القطاع</th>
-                  <th>عقاري</th>
-                  <th>المبلغ</th>
-                  <th>التقديم</th>
+                  <th>رقم الجوال</th>
+                  <th>تاريخ الإرسال</th>
+                  <th>جهة العمل</th>
                   <th>رقم الطلب</th>
-                  <th>ملاحظة</th>
-                  <th>متابعة</th>
-                  <th>تواصل</th>
-                  <th>حذف</th>
+                  <th>وش صار</th>
+                  <th>ملاحظات</th>
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody id="leadsTableBody">
-                <tr><td colspan="14">جاري التحميل…</td></tr>
+                <tr><td colspan="7" class="empty">جاري تحميل العملاء...</td></tr>
               </tbody>
             </table>
           </div>
           <p class="hint" style="margin-top:12px;">
             اضغط رقم العميل لفتح المحادثة — يُوقف الرد الآلي لهذا العميل تلقائياً.
-            زر <strong>إيقاف الرد الآلي</strong> أمام الرقم لك فقط (مو للعميل).
-            أرسل للعميل من <strong>صندوق Interakt</strong>: <code>stop</code> / <code>إيقاف</code> → يتوقف الرد الآلي لهذا العميل؛ <code>start</code> للاستئناف.
-            من تطبيق واتساب الأعمال فقط قد <strong>لا تصل</strong> الرسالة للخادم — فضّل صندوق Interakt أو زر الإيقاف هنا.
-            · أمام الرقم: <span class="lead-mark-dot reminder">★</span> تذكير · <span class="lead-mark-dot waiting">⏳</span> انتظار · <span class="lead-mark-dot done">✓</span> منفذ · <span class="lead-mark-dot rejected">✕</span> مرفوض · ○ بدون — يُلوَّن السطر كاملاً.
-            · عمود <strong>ملاحظة</strong> لحفظ حالة الطلب.
+            شارة <span class="badge pending-follow">لم تُرسل متابعة</span>
+            و <span class="badge followed">تمت المتابعة</span>
+            تظهر تحت الرقم. تبويب «أخذ رابط التمويل» يفلتر من تُوبع ومن لم يُتابع.
           </p>
-        </div>
-        <div id="leadNoteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="leadNoteModalTitle">
-          <div class="modal-card">
-            <h3 id="leadNoteModalTitle" style="margin:0 0 8px;">ملاحظة — حالة الطلب</h3>
-            <p class="muted" id="leadNoteModalPhone" style="margin:0 0 12px;"></p>
-            <label for="leadNoteModalText" class="sr-only">نص الملاحظة</label>
-            <textarea id="leadNoteModalText" rows="7" maxlength="2000" placeholder="مثال: بانتظار الموافقة · تم الرفض · العميل لم يرد · راجع بعد أسبوع…"></textarea>
-            <p class="muted" id="leadNoteModalMeta" style="margin:8px 0 0;font-size:0.82rem;"></p>
-            <div class="modal-actions">
-              <button type="button" class="btn-primary" id="leadNoteModalSave">حفظ</button>
-              <button type="button" class="btn-secondary" id="leadNoteModalClear">مسح الملاحظة</button>
-              <button type="button" class="btn-secondary" id="leadNoteModalClose">إغلاق</button>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -675,6 +663,6 @@
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="/dashboard.js?v=25"></script>
+  <script src="/dashboard.js?v=26"></script>
 </body>
 </html>

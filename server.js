@@ -16,6 +16,13 @@ const {
   setLeadOrderNumber,
   setLeadStatusNote,
   setLeadManualMark,
+  setLeadOutcome,
+  setLeadWorkplace,
+  setLeadArchived,
+  exportLeadsBackup,
+  writeLeadsBackupCopy,
+  importLeadsBackup,
+  getFollowUpSafeSettings,
   resolveWaAccountForOpenChat,
 } = require("./lib/customer-leads");
 const { openWhatsAppChat } = require("./lib/open-wa-chat");
@@ -394,24 +401,35 @@ app.get(
       status,
       limit,
       page,
+      offset,
       waAccountId,
       applicationMethod,
       phoneSearch,
       orderNumberSearch,
       manualMark,
+      day,
+      q,
+      search,
+      followupFilter,
+      phonesOnly,
     } = req.query || {};
     const payload = getLeads({
       status,
       limit,
       page,
+      offset,
       waAccountId,
       applicationMethod,
       phoneSearch,
       orderNumberSearch,
       manualMark,
+      day,
+      q: q || search,
+      followupFilter,
+      phonesOnly: phonesOnly === "1" || phonesOnly === "true",
     });
-    if (Array.isArray(payload?.rows)) {
-      payload.rows = payload.rows.map((row) => ({
+    if (Array.isArray(payload?.leads)) {
+      payload.leads = payload.leads.map((row) => ({
         ...row,
         autoReplyPaused: isPausedByPhone(
           row.phone,
@@ -547,13 +565,6 @@ app.get(
   }
 );
 
-app.get("/api/leads/followup-template", requireAuth, requirePerm("settings:read"), (_req, res) => {
-  res.json({
-    ok: true,
-    message: CONFIG.followUp?.electronicMessage || "",
-  });
-});
-
 app.patch(
   "/api/leads/:id/order-number",
   requireAuth,
@@ -595,6 +606,116 @@ app.patch(
     }
   }
 );
+
+app.patch(
+  "/api/leads/:id/outcome",
+  requireAuth,
+  requirePerm("settings:write"),
+  (req, res) => {
+    try {
+      const lead = setLeadOutcome(req.params.id, req.body?.outcome);
+      res.json({ ok: true, lead });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.patch(
+  "/api/leads/:id/workplace",
+  requireAuth,
+  requirePerm("settings:write"),
+  (req, res) => {
+    try {
+      const lead = setLeadWorkplace(req.params.id, req.body?.workplace);
+      res.json({ ok: true, lead });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.post(
+  "/api/leads/:id/archive",
+  requireAuth,
+  requirePerm("settings:write"),
+  (req, res) => {
+    try {
+      const lead = setLeadArchived(req.params.id, req.body?.archived !== false);
+      res.json({ ok: true, lead });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.post(
+  "/api/leads/:id/unarchive",
+  requireAuth,
+  requirePerm("settings:write"),
+  (req, res) => {
+    try {
+      const lead = setLeadArchived(req.params.id, false);
+      res.json({ ok: true, lead });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.get(
+  "/api/leads/export",
+  requireAuth,
+  requirePerm("stats:read"),
+  (_req, res) => {
+    try {
+      const backup = exportLeadsBackup();
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="customers-backup-${new Date().toISOString().slice(0, 10)}.json"`
+      );
+      res.send(JSON.stringify(backup, null, 2));
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.post(
+  "/api/leads/backup",
+  requireAuth,
+  requirePerm("settings:write"),
+  (_req, res) => {
+    try {
+      res.json(writeLeadsBackupCopy());
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.post(
+  "/api/leads/import",
+  requireAuth,
+  requirePerm("settings:write"),
+  (req, res) => {
+    try {
+      res.json(importLeadsBackup(req.body || {}));
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  }
+);
+
+app.get("/api/leads/followup-template", requireAuth, requirePerm("settings:read"), (_req, res) => {
+  const safe = getFollowUpSafeSettings();
+  res.json({
+    ok: true,
+    message: CONFIG.followUp?.electronicMessage || "",
+    outboundSafe: safe,
+  });
+});
 
 function deleteLeadHandler(req, res) {
   try {
@@ -643,6 +764,9 @@ app.post(
       leadId: leadId || undefined,
       onlyUnsent,
       dryRun,
+      delayMs: body.delayMs,
+      limit: body.limit,
+      skipIfFollowedUpWithinHours: body.skipIfFollowedUpWithinHours,
     });
 
     res.json(result);

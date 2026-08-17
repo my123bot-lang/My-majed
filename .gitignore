@@ -20,6 +20,8 @@ data/paused-chats*.json
 # Optional local overrides of sensitive runtime data
 data/admin-users.json
 data/customer-leads.json
+data/followup-quota.json
+data/customer-leads-backup-*.json
 data/portal-links.json
 
 # OS / editor
