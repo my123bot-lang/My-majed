@@ -385,11 +385,19 @@ router.post("/customers/sync-interakt", async (req, res) => {
     }
     const days = Math.min(Math.max(Number(req.body?.days) || 30, 1), 90);
     const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    const noFilter = req.body?.noFilter === true;
+    const debug = req.body?.debug === true;
     const incoming = [];
     let offset = 0;
     let fetched = 0;
+    let firstRaw = null;
     for (let page = 0; page < 40; page++) {
-      const pack = await interakt.listUsersPage({ offset, limit: 100, sinceIso: since });
+      const pack = await interakt.listUsersPage({
+        offset,
+        limit: 100,
+        sinceIso: noFilter ? null : since,
+      });
+      if (debug && firstRaw == null) firstRaw = pack.raw;
       fetched += pack.users.length;
       for (const user of pack.users) {
         const phone =
@@ -431,6 +439,7 @@ router.post("/customers/sync-interakt", async (req, res) => {
       hint: incoming.length
         ? "الأرقام رجعت من إنترأكت. الملاحظات و«وش صار» ما ترجع إلا من ملف بكب."
         : "ما لقينا أرقام في إنترأكت لهذه الفترة.",
+      ...(debug ? { debugRaw: firstRaw } : {}),
     });
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message });
