@@ -353,6 +353,28 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
     <div id="error-banner" class="error-banner"></div>
 
     <div id="home-view">
+    <div id="persistence-banner" class="card" style="margin-bottom:14px;display:none;border-color:rgba(157,58,45,.35);background:rgba(157,58,45,.06)">
+      <h3 style="margin-top:0;color:var(--danger)">التخزين مؤقت — يتصفر بعد إعادة التشغيل</h3>
+      <p class="muted" id="persistence-banner-text" style="margin-bottom:0">أضف Persistent Disk في Render على المسار <code>/var/data</code> ثم Environment: <code>CUSTOMERS_DATA_DIR=/var/data/majed</code>. قبل أي نشر: نزّل بكب.</p>
+    </div>
+    <details class="card backup-panel" id="backup-panel" style="margin-bottom:14px" open>
+      <summary>النسخ الاحتياطي وجلب السابق</summary>
+      <div>
+        <p class="muted">الأرقام اختفت لأن القرص مؤقت بعد النشر. اضغط «جلب من Interakt» يرجع الجوالات، أو الصق ملف بكب إن عندك.</p>
+        <p class="muted" id="persistence-line" style="margin-top:8px">حالة الحفظ: —</p>
+        <div class="btn-row">
+          <button id="export-customers" class="btn primary" type="button">تنزيل بكب</button>
+          <button id="backup-now" class="btn secondary" type="button">حفظ نسخة الآن</button>
+          <button id="sync-interakt" class="btn secondary" type="button">جلب من Interakt (30 يوم)</button>
+        </div>
+        <label class="field" style="margin-top:14px">
+          <span>استيراد بكب (الصق محتوى ملف JSON)</span>
+          <textarea id="import-json" rows="4" placeholder='{"customers":[...]}'></textarea>
+        </label>
+        <button id="import-customers" class="btn secondary" type="button">استيراد ودمج</button>
+        <p id="backup-status" class="status" hidden></p>
+      </div>
+    </details>
     <form id="jump-form" class="card home-search">
       <label class="field" style="margin:0">
         <span>بحث برقم الجوال — الرقم كامل أو بدايته مثل 0551</span>
@@ -612,7 +634,7 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
 
 <script>
 (() => {
-  const UI_VERSION = "20260820r3";
+  const UI_VERSION = "20260820r4";
   const NOTE_OUTCOMES = [
     { id: "finance_link", label: "أخذ رابط التمويل" },
     { id: "package", label: "أخذ باقة" },
@@ -989,7 +1011,29 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
     updateTabCounts(counts);
   }
 
-  function updatePersistenceUi(_persistence) {}
+  function updatePersistenceUi(persistence) {
+    const banner = document.getElementById("persistence-banner");
+    const line = document.getElementById("persistence-line");
+    if (!persistence) {
+      if (banner) banner.style.display = "none";
+      if (line) line.textContent = "حالة الحفظ: غير متاحة";
+      return;
+    }
+    if (banner) banner.style.display = persistence.durable ? "none" : "block";
+    if (line) {
+      line.textContent = persistence.durable
+        ? `حالة الحفظ: قرص دائم · ${persistence.count || 0} عميل محفوظ · ${persistence.dataDir || ""}`
+        : `حالة الحفظ: مؤقت (يُمسح بعد إعادة التشغيل/النشر) · ${persistence.count || 0} عميل · ${persistence.dataDir || ""}`;
+      line.style.color = persistence.durable ? "var(--accent)" : "var(--danger)";
+    }
+  }
+
+  function setBackupStatus(msg) {
+    const el = document.getElementById("backup-status");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = msg;
+  }
 
   function setCustomerTab(day) {
     customerDay = day;
@@ -1515,6 +1559,72 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
     url.searchParams.set("v", UI_VERSION);
     url.searchParams.set("r", String(Date.now()));
     location.replace(url.pathname + url.search + url.hash);
+  });
+
+  document.getElementById("export-customers")?.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/admin/api/customers/export", { credentials: "same-origin" });
+      if (!res.ok) throw new Error("فشل التنزيل");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `customers-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupStatus("تم تنزيل ملف البكب — احفظه عندك قبل أي نشر");
+    } catch (err) {
+      setBackupStatus(err.message);
+    }
+  });
+
+  document.getElementById("backup-now")?.addEventListener("click", async () => {
+    try {
+      const r = await api("/customers/backup", { method: "POST", body: "{}" });
+      setBackupStatus(`تم الحفظ: ${r.summary?.counts?.all || 0} عميل`);
+      await refreshAll();
+    } catch (err) {
+      setBackupStatus(err.message);
+    }
+  });
+
+  document.getElementById("sync-interakt")?.addEventListener("click", async () => {
+    try {
+      setBackupStatus("جاري الجلب من Interakt...");
+      const r = await api("/customers/sync-interakt", {
+        method: "POST",
+        body: JSON.stringify({ days: 30 }),
+      });
+      updatePersistenceUi(r.persistence);
+      const savedOk = r.saved?.ok !== false;
+      setBackupStatus(
+        `Interakt: جلب ${r.fetched || 0} رقم · جديد ${r.created || 0} · محدّث ${r.updated || 0}` +
+          (savedOk ? " · تم الحفظ على القرص" : " · فشل الحفظ على القرص") +
+          (r.persistence?.durable ? " · تخزين دائم" : " · تخزين مؤقت") +
+          (r.hint ? ` — ${r.hint}` : "")
+      );
+      await refreshAll();
+    } catch (err) {
+      setBackupStatus(err.message);
+    }
+  });
+
+  document.getElementById("import-customers")?.addEventListener("click", async () => {
+    try {
+      const raw = document.getElementById("import-json").value.trim();
+      if (!raw) throw new Error("الصق محتوى ملف البكب أولًا");
+      const payload = JSON.parse(raw);
+      const r = await api("/customers/import", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setBackupStatus(
+        `تم الاستيراد: جديد/مدمج ${r.imported || 0} · محدّث ${r.updated || 0} · الإجمالي ${r.total || 0}`
+      );
+      await refreshAll();
+    } catch (err) {
+      setBackupStatus(err.message);
+    }
   });
 
   document.getElementById("customer-tabs").addEventListener("click", async (e) => {

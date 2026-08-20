@@ -374,18 +374,67 @@ router.post("/customers/import", (req, res) => {
   }
 });
 
-router.post("/customers/sync-interakt", (_req, res) => {
-  const pack = getLeads({ day: "all", limit: 1 });
-  res.json({
-    ok: true,
-    fetched: 0,
-    created: 0,
-    updated: 0,
-    saved: { ok: true },
-    persistence: pack.persistence,
-    preferDay: pack.tabCounts?.today ? "today" : "all",
-    hint: "عملاء ماجد يُسجَّلون تلقائياً من المحادثات. استخدم البكب للاستيراد.",
-  });
+router.post("/customers/sync-interakt", async (req, res) => {
+  try {
+    const interakt = require("../lib/interakt-client");
+    if (!interakt.isConfigured()) {
+      return res.status(400).json({
+        ok: false,
+        error: "INTERAKT_API_KEY غير مضبوط على Render",
+      });
+    }
+    const days = Math.min(Math.max(Number(req.body?.days) || 30, 1), 90);
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    const incoming = [];
+    let offset = 0;
+    let fetched = 0;
+    for (let page = 0; page < 40; page++) {
+      const pack = await interakt.listUsersPage({ offset, limit: 100, sinceIso: since });
+      fetched += pack.users.length;
+      for (const user of pack.users) {
+        const phone =
+          user.phoneNumber ||
+          user.phone_number ||
+          user.phone ||
+          user.traits?.phone ||
+          user.traits?.phoneNumber ||
+          "";
+        const country = user.countryCode || user.country_code || user.traits?.countryCode || "+966";
+        const at =
+          user.created_at_utc ||
+          user.createdAt ||
+          user.traits?.created_at_utc ||
+          new Date().toISOString();
+        incoming.push({
+          phone: `${country}${phone}`,
+          at,
+          lastInboundAt: at,
+          waAccountId: "majed",
+          waAccountLabel: "ماجد",
+        });
+      }
+      if (!pack.hasNext || !pack.users.length) break;
+      offset += 100;
+    }
+    const imported = incoming.length
+      ? importLeadsBackup({ leads: incoming })
+      : { ok: true, imported: 0, updated: 0, total: 0, persistence: getPersistenceInfo(0) };
+    const pack = getLeads({ day: "all", limit: 1 });
+    res.json({
+      ok: true,
+      fetched,
+      created: imported.imported || 0,
+      updated: imported.updated || 0,
+      saved: { ok: true },
+      persistence: imported.persistence || pack.persistence,
+      preferDay: pack.tabCounts?.today ? "today" : "all",
+      hint: incoming.length
+        ? "الأرقام رجعت من إنترأكت. الملاحظات و«وش صار» ما ترجع إلا من ملف بكب."
+        : "ما لقينا أرقام في إنترأكت لهذه الفترة.",
+    });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
 });
 
 router.post("/send-followup", async (req, res) => {
