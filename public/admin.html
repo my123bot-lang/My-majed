@@ -184,16 +184,6 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
 }
 .phone-link:hover { text-decoration: underline; }
 .meta-line { font-size: .82rem; color: var(--muted); margin-top: 4px; }
-.backup-panel > summary {
-  cursor: pointer; list-style: none; font-weight: 700; font-size: 1.05rem;
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-}
-.backup-panel > summary::-webkit-details-marker { display: none; }
-.backup-panel > summary::after {
-  content: "▾"; color: var(--muted); font-size: .9rem; transition: transform .15s ease;
-}
-.backup-panel[open] > summary::after { transform: rotate(180deg); }
-.backup-panel > summary + * { margin-top: 12px; }
 .error-banner {
   display: none; margin-bottom: 14px; padding: 12px 14px;
   border-radius: 12px; border: 1px solid rgba(157,58,45,.35);
@@ -353,28 +343,6 @@ th { color: var(--muted); font-size: .86rem; white-space: nowrap; }
     <div id="error-banner" class="error-banner"></div>
 
     <div id="home-view">
-    <div id="persistence-banner" class="card" style="margin-bottom:14px;display:none;border-color:rgba(157,58,45,.35);background:rgba(157,58,45,.06)">
-      <h3 style="margin-top:0;color:var(--danger)">التخزين مؤقت — يتصفر بعد إعادة التشغيل</h3>
-      <p class="muted" id="persistence-banner-text" style="margin-bottom:0">أضف Persistent Disk في Render على المسار <code>/var/data</code> ثم Environment: <code>CUSTOMERS_DATA_DIR=/var/data/majed</code>. قبل أي نشر: نزّل بكب.</p>
-    </div>
-    <details class="card backup-panel" id="backup-panel" style="margin-bottom:14px" open>
-      <summary>النسخ الاحتياطي وجلب السابق</summary>
-      <div>
-        <p class="muted">الأرقام اختفت لأن القرص مؤقت بعد النشر. اضغط «جلب من Interakt» يرجع الجوالات، أو الصق ملف بكب إن عندك.</p>
-        <p class="muted" id="persistence-line" style="margin-top:8px">حالة الحفظ: —</p>
-        <div class="btn-row">
-          <button id="export-customers" class="btn primary" type="button">تنزيل بكب</button>
-          <button id="backup-now" class="btn secondary" type="button">حفظ نسخة الآن</button>
-          <button id="sync-interakt" class="btn secondary" type="button">جلب من Interakt (30 يوم)</button>
-        </div>
-        <label class="field" style="margin-top:14px">
-          <span>استيراد بكب (الصق محتوى ملف JSON)</span>
-          <textarea id="import-json" rows="4" placeholder='{"customers":[...]}'></textarea>
-        </label>
-        <button id="import-customers" class="btn secondary" type="button">استيراد ودمج</button>
-        <p id="backup-status" class="status" hidden></p>
-      </div>
-    </details>
     <form id="jump-form" class="card home-search">
       <label class="field" style="margin:0">
         <span>بحث برقم الجوال — الرقم كامل أو بدايته مثل 0551</span>
