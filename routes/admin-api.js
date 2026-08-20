@@ -383,7 +383,7 @@ router.post("/customers/sync-interakt", async (req, res) => {
         error: "INTERAKT_API_KEY غير مضبوط على Render",
       });
     }
-    const days = Math.min(Math.max(Number(req.body?.days) || 30, 1), 90);
+    const days = Math.min(Math.max(Number(req.body?.days) || 30, 1), 3650);
     const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
     const noFilter = req.body?.noFilter === true;
     const debug = req.body?.debug === true;
@@ -391,7 +391,7 @@ router.post("/customers/sync-interakt", async (req, res) => {
     let offset = 0;
     let fetched = 0;
     let firstRaw = null;
-    for (let page = 0; page < 40; page++) {
+    for (let page = 0; page < 200; page++) {
       const pack = await interakt.listUsersPage({
         offset,
         limit: 100,
