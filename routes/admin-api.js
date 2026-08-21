@@ -176,24 +176,27 @@ router.get("/debug/interakt-contact", async (req, res) => {
 router.post("/debug/interakt-send-raw", async (req, res) => {
   const interakt = require("../lib/interakt-client");
   const phone = String(req.body?.phone || "");
-  const countryCode = String(req.body?.countryCode || "").trim() || undefined;
-  const { countryCode: cc, phoneNumber } = interakt.splitPhone(
+  const { countryCode: derivedCc, phoneNumber: derivedPhone } = interakt.splitPhone(
     phone,
-    countryCode || interakt.getConfig().countryCode
+    interakt.getConfig().countryCode
   );
+  const countryCode =
+    req.body?.countryCode != null ? String(req.body.countryCode) : derivedCc;
+  const phoneNumber =
+    req.body?.phoneNumber != null ? String(req.body.phoneNumber) : derivedPhone;
   try {
     const data = await interakt.interaktFetch("/message/", {
-      countryCode: cc,
+      countryCode,
       phoneNumber,
       type: "Text",
       callbackData: "debug_probe",
       data: { message: String(req.body?.message || "مرحباً، معك ماجد").slice(0, 200) },
     });
-    res.json({ ok: true, sentWith: { countryCode: cc, phoneNumber }, data });
+    res.json({ ok: true, sentWith: { countryCode, phoneNumber }, data });
   } catch (err) {
     res.status(200).json({
       ok: false,
-      sentWith: { countryCode: cc, phoneNumber },
+      sentWith: { countryCode, phoneNumber },
       status: err.status || null,
       errorData: err.data || null,
       errorMessage: err.message,
