@@ -151,6 +151,28 @@ function requireOrCreate(phone, patch = {}) {
   return upsertLeadByPhone(phone, patch);
 }
 
+router.get("/debug/interakt-contact", async (req, res) => {
+  try {
+    const interakt = require("../lib/interakt-client");
+    const needle = String(req.query?.phone || "").replace(/\D/g, "").slice(-9);
+    if (!needle) return res.status(400).json({ ok: false, error: "phone مطلوب" });
+    let offset = 0;
+    let found = null;
+    for (let page = 0; page < 60; page++) {
+      const pack = await interakt.listUsersPage({ offset, limit: 100 });
+      found = pack.users.find((u) => {
+        const p = String(u.phone_number || u.phoneNumber || "").replace(/\D/g, "");
+        return p.endsWith(needle);
+      });
+      if (found || !pack.hasNext || !pack.users.length) break;
+      offset += 100;
+    }
+    res.json({ ok: true, found: found || null, searchedPages: Math.floor(offset / 100) + 1 });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 router.get("/debug/phone", (req, res) => {
   const interakt = require("../lib/interakt-client");
   const phone = String(req.query?.phone || "");
