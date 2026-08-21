@@ -151,6 +151,21 @@ function requireOrCreate(phone, patch = {}) {
   return upsertLeadByPhone(phone, patch);
 }
 
+router.get("/debug/phone", (req, res) => {
+  const interakt = require("../lib/interakt-client");
+  const phone = String(req.query?.phone || "");
+  const cfg = interakt.getConfig();
+  res.json({
+    ok: true,
+    phone,
+    phoneChars: [...phone].map((c) => c.codePointAt(0)),
+    countryCodeEnv: cfg.countryCode,
+    countryCodeEnvChars: [...String(cfg.countryCode || "")].map((c) => c.codePointAt(0)),
+    split: interakt.splitPhone(phone, cfg.countryCode),
+    apiKeyConfigured: interakt.isConfigured(),
+  });
+});
+
 router.get("/debug/last-webhook", (_req, res) => {
   const fs = require("fs");
   function readJsonSafe(p) {
