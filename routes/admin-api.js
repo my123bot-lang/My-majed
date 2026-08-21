@@ -173,6 +173,34 @@ router.get("/debug/interakt-contact", async (req, res) => {
   }
 });
 
+router.post("/debug/interakt-send-raw", async (req, res) => {
+  const interakt = require("../lib/interakt-client");
+  const phone = String(req.body?.phone || "");
+  const countryCode = String(req.body?.countryCode || "").trim() || undefined;
+  const { countryCode: cc, phoneNumber } = interakt.splitPhone(
+    phone,
+    countryCode || interakt.getConfig().countryCode
+  );
+  try {
+    const data = await interakt.interaktFetch("/message/", {
+      countryCode: cc,
+      phoneNumber,
+      type: "Text",
+      callbackData: "debug_probe",
+      data: { message: String(req.body?.message || "مرحباً، معك ماجد").slice(0, 200) },
+    });
+    res.json({ ok: true, sentWith: { countryCode: cc, phoneNumber }, data });
+  } catch (err) {
+    res.status(200).json({
+      ok: false,
+      sentWith: { countryCode: cc, phoneNumber },
+      status: err.status || null,
+      errorData: err.data || null,
+      errorMessage: err.message,
+    });
+  }
+});
+
 router.get("/debug/phone", (req, res) => {
   const interakt = require("../lib/interakt-client");
   const phone = String(req.query?.phone || "");
