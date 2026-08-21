@@ -151,6 +151,48 @@ function requireOrCreate(phone, patch = {}) {
   return upsertLeadByPhone(phone, patch);
 }
 
+router.get("/debug/last-webhook", (_req, res) => {
+  const fs = require("fs");
+  function readJsonSafe(p) {
+    try {
+      return JSON.parse(fs.readFileSync(p, "utf8"));
+    } catch (_) {
+      return null;
+    }
+  }
+  res.json({
+    ok: true,
+    lastInbound: readJsonSafe("/tmp/interakt-last-inbound.json"),
+    lastOutbound: readJsonSafe("/tmp/interakt-last-outbound.json"),
+    serverNow: new Date().toISOString(),
+  });
+});
+
+router.get("/debug/session", (req, res) => {
+  const phone = String(req.query?.phone || "").trim();
+  const { sessions, isClosed, getClosedState } = require("../lib/session");
+  const { digitsOnly } = require("../lib/contact-phone");
+  const needle = digitsOnly(phone).replace(/^966/, "").replace(/^0+/, "");
+  const matches = [];
+  for (const [chatId, session] of Object.entries(sessions)) {
+    const d = digitsOnly(chatId).replace(/^966/, "").replace(/^0+/, "");
+    if (!needle || d.endsWith(needle) || needle.endsWith(d)) {
+      matches.push({ chatId, session });
+    }
+  }
+  const closedMatches = [];
+  const { isPausedByPhone } = require("../lib/owner-chat-control");
+  res.json({
+    ok: true,
+    phone,
+    sessionCount: Object.keys(sessions).length,
+    matches,
+    isClosed: isClosed(`${needle}@c.us`),
+    closedState: getClosedState(`${needle}@c.us`),
+    paused: isPausedByPhone(phone, null),
+  });
+});
+
 router.get("/status", (_req, res) => {
   const pack = getLeads({ day: "all", limit: 1 });
   const persistence = pack.persistence || getPersistenceInfo(pack.total);
