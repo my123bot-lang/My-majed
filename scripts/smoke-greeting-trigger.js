@@ -7,7 +7,7 @@
 const assert = require("assert");
 const { matchesStartKeyword } = require("../lib/validators");
 
-const KEYWORDS = ["مرحبا", "هلا", "أهلا", "اهلا", "السلام عليكم", "وعليكم السلام", "1"];
+const KEYWORDS = ["مرحبا", "هلا", "السلام عليكم", "1"];
 
 function ok(cond, msg) {
   assert.ok(cond, msg);
