@@ -334,19 +334,32 @@ async function handleCustomerMessage(msg) {
     return;
   }
 
-  // إيقاف/تشغيل الرد الآلي للمالك فقط — العميل لا يوقف البوت بـ stop/start
-
-  if (!autoReplyControl.isEnabled()) {
-    console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);
-    return;
-  }
-
   // اربط @lid برقم الجوال قبل فحص الإيقاف حتى لا يفلت العميل الموقوف
   let phoneHint = null;
   try {
     phoneHint = await resolvePhoneFromMessage(msg);
   } catch (_) {
     /* ignore */
+  }
+
+  try {
+    rememberActiveCustomer(phoneHint || from, from);
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    customerLeads.recordInboundMessage(phoneHint || from, {
+      text: String(msg.body || ""),
+    });
+  } catch (err) {
+    console.warn("تعذر حفظ الوارد في السجل:", err.message);
+  }
+
+  // إيقاف/تشغيل الرد الآلي للمالك فقط — العميل لا يوقف البوت بـ stop/start
+
+  if (!autoReplyControl.isEnabled()) {
+    console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);
+    return;
   }
 
   if (
@@ -365,12 +378,6 @@ async function handleCustomerMessage(msg) {
   if (sessionStore.shouldThrottle(from, String(msg.body || ""))) {
     console.log("تجاهل رسالة سريعة من:", from);
     return;
-  }
-
-  try {
-    rememberActiveCustomer(phoneHint || from, from);
-  } catch (_) {
-    /* ignore */
   }
 
   callStats.recordInboundContact();

@@ -15,6 +15,7 @@ const {
   computeTabCounts,
   decorateCrmLead,
   getLeads,
+  recordInboundMessage,
   setLeadOutcome,
   setLeadWorkplace,
   setLeadArchived,
@@ -215,5 +216,17 @@ ok(
   !candidates.some((r) => r.id === "lead-3"),
   "bulk skips recently followed"
 );
+
+const inbound = recordInboundMessage("0536671022", { text: "السلام عليكم كيف الحال" });
+ok(inbound && inbound.phone === "0536671022", "inbound WhatsApp creates CRM row");
+ok(inbound.lastInboundText.includes("السلام عليكم"), "inbound stores last text");
+const inboundHits = getLeads({ phoneSearch: "0536671022", limit: 5 });
+ok(
+  inboundHits.leads.some((r) => r.phone === "0536671022"),
+  "home search finds inbound number immediately"
+);
+const again = recordInboundMessage("0536671022", { text: "1" });
+ok(again.id === inbound.id, "second inbound updates same row");
+ok(again.lastInboundText === "1", "second inbound refreshes last text");
 
 console.log("smoke-leads-dashboard: all ok");

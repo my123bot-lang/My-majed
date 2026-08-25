@@ -28,6 +28,7 @@ const {
 } = require("../lib/owner-remote-control");
 const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
 const { rememberActiveCustomer } = require("../lib/last-active-customer");
+const customerLeads = require("../lib/customer-leads");
 
 const router = express.Router();
 
@@ -140,6 +141,13 @@ async function processInbound(inbound) {
   // لا تُسجَّل أرقام التحكم كـ «آخر عميل» حتى يبقى Stop/زر القائمة موجّهاً للعملاء
   if (!isOwnerControlPhone(inbound.phone)) {
     rememberActiveCustomer(inbound.phone);
+    try {
+      customerLeads.recordInboundMessage(inbound.phone, {
+        text: inbound.body || "",
+      });
+    } catch (err) {
+      console.warn("[interakt] تعذر حفظ الوارد في السجل:", err.message);
+    }
   }
 
   if (!inbound.body) {
