@@ -8,6 +8,7 @@ process.env.CLOUD = "1";
 const { startServer, PORT, HOST } = require("./server");
 const interakt = require("./lib/interakt-client");
 const { logOwnerControlBanner } = require("./lib/owner-remote-control");
+const { autoRestoreOnBootIfEmpty } = require("./lib/interakt-sync");
 
 console.log("");
 console.log("============================================");
@@ -27,3 +28,4 @@ console.log("============================================");
 console.log("");
 
 startServer({ openAdminBrowser: false });
+autoRestoreOnBootIfEmpty();

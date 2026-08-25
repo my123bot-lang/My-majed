@@ -24,7 +24,8 @@
     "test:admin-open": "node scripts/smoke-admin-open.js",
     "test:raed-admin": "node scripts/smoke-raed-admin.js",
     "test:greeting-trigger": "node scripts/smoke-greeting-trigger.js",
-    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js && node scripts/smoke-raed-admin.js && node scripts/smoke-greeting-trigger.js"
+    "test:interakt-sync": "node scripts/smoke-interakt-sync.js",
+    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js && node scripts/smoke-raed-admin.js && node scripts/smoke-greeting-trigger.js && node scripts/smoke-interakt-sync.js"
   },
   "keywords": [],
   "author": "",
