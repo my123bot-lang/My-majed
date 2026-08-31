@@ -26,7 +26,8 @@
     "test:greeting-trigger": "node scripts/smoke-greeting-trigger.js",
     "test:interakt-sync": "node scripts/smoke-interakt-sync.js",
     "test:interactive": "node scripts/smoke-interactive-menus.js",
-    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js && node scripts/smoke-raed-admin.js && node scripts/smoke-greeting-trigger.js && node scripts/smoke-interakt-sync.js && node scripts/smoke-interactive-menus.js"
+    "test:salary-policy": "node scripts/smoke-salary-policy.js",
+    "test": "node scripts/smoke-calc.js && node scripts/smoke-stop-start.js && node scripts/smoke-leads-dashboard.js && node scripts/smoke-admin-open.js && node scripts/smoke-raed-admin.js && node scripts/smoke-greeting-trigger.js && node scripts/smoke-interakt-sync.js && node scripts/smoke-interactive-menus.js && node scripts/smoke-salary-policy.js"
   },
   "keywords": [],
   "author": "",
