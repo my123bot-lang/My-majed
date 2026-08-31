@@ -382,6 +382,18 @@ module.exports = {
     afterSalesDetailsReceived: `تم استلام طلبك، بيتواصل معك الموظف ماجد قريباً.
 رقم التواصل: 0507009290`,
 
+    salaryPolicyNote: () => {
+      const fmt = (n) => Number(n).toLocaleString("en-US");
+      const mins = module.exports.limits.minSalaryByCategory;
+      return `أقل راتب ينزل في الصراف إيداع راتب
+
+* ${fmt(mins.civilian)} ريال للمدني
+* ${fmt(mins.retired)} ريال للمتقاعد
+* ${fmt(mins.military)} ريال للعسكري
+
+ملاحظة: أقل مما ذُكر يتم رفضه.`;
+    },
+
     civilianSectorPrompt: `اختر نوع الجهة:
 
 1- حكومي
@@ -695,12 +707,6 @@ ${companyName}`,
 ${phone}
 
 ماجد`,
-
-    salaryPolicyDetail: (label, amountFormatted) =>
-      `${label}: ${amountFormatted} ريال
-أقل راتب ينزل في الصراف إيداع راتب.
-
-ملاحظة: أقل مما ذُكر يتم رفضه.`,
 
     serviceStopWelcome: (
       totalFormatted,
