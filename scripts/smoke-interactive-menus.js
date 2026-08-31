@@ -37,13 +37,40 @@ for (const row of main.rows) {
 const listData = buildListMessageData(main.body, main.buttonText, main.rows);
 ok(listData.message.type === "list", "حمولة Interakt type=list");
 ok(listData.message.action.sections[0].title === "الخيارات", "عنوان القسم");
+const salaryPropRow = listData.message.action.sections[0].rows.find(
+  (r) => r.id === "7"
+);
 ok(
-  listData.message.action.sections[0].rows.every((r) => r.description),
-  "كل صف له description كما في مثال Interakt"
+  salaryPropRow &&
+    salaryPropRow.description === "أقل راتب للصراف حسب القطاع",
+  "وصف سياسة الرواتب يُرسل فقط عند اختلافه عن العنوان"
+);
+ok(
+  listData.message.action.sections[0].rows
+    .filter((r) => r.id !== "7")
+    .every((r) => !r.description),
+  "صفوف بدون وصف صريح لا تحصل على description مكرر للعنوان"
 );
 ok(
   listData.message.body.text.includes("مانوع استفسارك"),
   "نص الترحيب داخل جسم القائمة"
+);
+
+const amountMenu = menus.lowerAmountTiers([35000, 30000, 25000, 15000, 10000]);
+const amountRows = listRowsForWhatsApp(amountMenu.rows);
+ok(
+  amountRows.every((r) => r.title && !r.description),
+  "قائمة المبالغ بدون description حتى لا يتكرر الاختيار في واتساب"
+);
+const yearsMenu = menus.loanTermYears([1, 2, 3, 4, 5]);
+const yearRows = listRowsForWhatsApp(yearsMenu.rows);
+ok(
+  yearRows.every((r) => r.title && !r.description),
+  "قائمة السنوات بدون description حتى لا يتكرر الاختيار في واتساب"
+);
+ok(
+  yearRows.some((r) => r.id === "5" && r.title === "5 سنوات"),
+  "صف 5 سنوات يحتفظ بالعنوان فقط"
 );
 
 const yesNo = menus.yesNo("هل ترغب؟");
