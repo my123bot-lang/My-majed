@@ -23,7 +23,11 @@ function ok(cond, msg) {
 
 const main = menus.inquiryMain();
 ok(main.kind === "list", "القائمة الرئيسية InteractiveList");
-ok(main.rows.length === 6, "ستة خيارات في القائمة الرئيسية");
+ok(main.rows.length === 7, "سبعة خيارات في القائمة الرئيسية");
+ok(
+  main.rows.some((r) => r.id === "7" && r.title === "سياسة الرواتب المطلوبة"),
+  "خيار سياسة الرواتب المطلوبة في القائمة"
+);
 ok(main.buttonText === "الخيارات", "زر فتح القائمة: الخيارات");
 
 for (const row of main.rows) {
@@ -52,16 +56,27 @@ ok(
 );
 
 const chunks = listToButtonMenuChunks(main);
-ok(chunks.length === 2, "القائمة ذات 6 صفوف تنقسم إلى مجموعتي أزرار");
-ok(chunks[0].buttons.length === 3 && chunks[1].buttons.length === 3, "3 أزرار لكل رسالة");
+ok(chunks.length === 3, "القائمة ذات 7 صفوف تنقسم إلى 3 مجموعات أزرار");
+ok(
+  chunks[0].buttons.length === 3 &&
+    chunks[1].buttons.length === 3 &&
+    chunks[2].buttons.length === 1,
+  "3+3+1 أزرار عند فشل القائمة"
+);
 ok(
   chunks.flatMap((c) => c.buttons).every((b) => String(b.title).length <= 20),
   "عناوين الأزرار ≤20 حرفاً"
 );
+ok(
+  chunks[2].buttons[0].title === "سياسة الرواتب",
+  "عنوان زر سياسة الرواتب لا يُقطع عند الرجوع للأزرار"
+);
 
 const numbered = menuToText(main);
 ok(
-  numbered.includes("1- تمويل شخصي") && numbered.includes("6- خدمات مابعد البيع"),
+  numbered.includes("1- تمويل شخصي") &&
+    numbered.includes("6- خدمات مابعد البيع") &&
+    numbered.includes("7- سياسة الرواتب المطلوبة"),
   "النص البديل بنفس أرقام الخيارات"
 );
 
@@ -69,6 +84,11 @@ ok(
   parseInquiryType("تمويل شخصي") === "personal" &&
     parseInquiryType("1") === "personal",
   "اختيار القائمة أو الرقم يصل لنفس المسار"
+);
+ok(
+  parseInquiryType("سياسة الرواتب المطلوبة") === "salary_policy" &&
+    parseInquiryType("7") === "salary_policy",
+  "خيار سياسة الرواتب يصل لنفس المسار من العنوان أو الرقم"
 );
 
 const collapsed = normalizeInteractiveBody("سطر\n\n\n\nسطر");
@@ -83,7 +103,8 @@ const fromLocal = splitPhone("0501234567");
 ok(fromLocal.phoneNumber === "501234567", "تجزئة 05…");
 
 const waRows = listRowsForWhatsApp(main.rows);
-ok(waRows.length === 6 && waRows[0].id === "1", "صفوف واتساب تحافظ على المعرفات");
+ok(waRows.length === 7 && waRows[0].id === "1", "صفوف واتساب تحافظ على المعرفات");
+ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على المعرف 7");
 
 (async () => {
   let sentMenu = null;

@@ -456,6 +456,14 @@ async function main() {
     ownerMenu.rows.some((r) => r.id === "owner_resume_reply"),
     "قائمة المالك فيها تشغيل الرد الآلي"
   );
+  assert.ok(
+    ownerMenu.rows.some((r) => r.id === "7"),
+    "قائمة المالك تتضمن سياسة الرواتب"
+  );
+  assert.ok(
+    ownerMenu.rows.length <= 10,
+    "قائمة المالك لا تتجاوز حد واتساب 10 صفوف"
+  );
   const ownerBtns = menus.ownerAutoReplyControls();
   assert.strictEqual(ownerBtns.kind, "buttons");
   assert.strictEqual(ownerBtns.buttons.length, 2);
