@@ -12,7 +12,7 @@ const {
   listRowsForWhatsApp,
   normalizeInteractiveBody,
 } = require("../lib/interactive-menu");
-const { collectPhoneAttempts, splitPhone } = require("../lib/interakt-client");
+const { collectPhoneAttempts, splitPhone, isSessionWindowError } = require("../lib/interakt-client");
 const { createMetaMessage } = require("../lib/meta-adapter");
 const { parseInquiryType } = require("../lib/validators");
 
@@ -174,6 +174,17 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
   ok(
     typeof metaMsg.sendInteractive === "function",
     "مسار Meta فيه sendInteractive حتى لا تختفي الأزرار هناك"
+  );
+
+  ok(
+    isSessionWindowError({
+      message: "Interakt 400: User has not messaged within last 24 hours",
+    }),
+    "جلسة 24 ساعة تُكتشف من رسالة Interakt"
+  );
+  ok(
+    !isSessionWindowError({ message: "invalid session token" }),
+    "كلمة session العامة لا تُعتبر خطأ نافذة 24 ساعة"
   );
 
   console.log("smoke-interactive-menus: OK");
