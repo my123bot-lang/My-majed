@@ -47,6 +47,21 @@ ok(!matchesStartKeyword("101234567", KEYWORDS), "order number starting with 1 do
 ok(!matchesStartKeyword("10", KEYWORDS), "short numeric starting with 1 does NOT match");
 ok(!matchesStartKeyword("كيف الحال", KEYWORDS), "unrelated text does not match");
 ok(!matchesStartKeyword("", KEYWORDS), "empty text does not match");
+ok(
+  isPoliteGreeting("\u200Fسلام عليكم"),
+  "leading RTL mark still matches سلام عليكم"
+);
+ok(
+  matchesStartKeyword("\u200Fهلا", KEYWORDS),
+  "leading RTL mark still matches هلا"
+);
+ok(matchesStartKeyword("\u200E1", KEYWORDS), "leading LTR mark still matches 1");
+ok(matchesStartKeyword("هَلا", KEYWORDS), "diacritics still match هلا");
+ok(matchesStartKeyword("مرحباً", KEYWORDS), "tanween still matches مرحبا");
+ok(
+  isPoliteGreeting("سلام  عليكم"),
+  "extra spaces still match سلام عليكم"
+);
 
 function mockMsg(from, body) {
   const sent = { menus: [], texts: [] };
@@ -105,6 +120,30 @@ function mockMsg(from, body) {
   ok(atMenuHandled === true, "السلام عليكم على القائمة الرئيسية يعيد عرضها");
   ok(atMenu.sent.menus.length >= 1, "تُعاد القائمة إذا كان العميل على السؤال الأول");
   sessionStore.clearSession(from);
+
+  const markedFrom = "966501110002@c.us";
+  sessionStore.clearSession(markedFrom);
+  const marked = mockMsg(markedFrom, "\u200Fسلام عليكم");
+  const markedHandled = await handleIncomingMessage(marked.msg);
+  ok(markedHandled === true, "سلام عليكم بعلامة اتجاه خفية يفتح القائمة");
+  ok(marked.sent.menus.length >= 1, "تُرسل القائمة رغم علامة الاتجاه");
+  sessionStore.clearSession(markedFrom);
+
+  const burstFrom = "966501110003@c.us";
+  sessionStore.clearSession(burstFrom);
+  ok(
+    sessionStore.shouldThrottle(burstFrom, "من طرف ابو تركي") === false,
+    "الرسالة المعاد توجيهها تُعالج أولاً"
+  );
+  ok(
+    sessionStore.shouldThrottle(burstFrom, "\u200Fهلا") === false,
+    "هلا بعد رسالة معاد توجيهها لا تُحظر خلال ثانية"
+  );
+  ok(
+    sessionStore.shouldThrottle(burstFrom, "مرحبا") === true,
+    "كلمة بدء ثانية في نفس اللحظة تُحظر حتى لا تتكرر القائمة"
+  );
+  sessionStore.clearSession(burstFrom);
 
   console.log("smoke-greeting-trigger: OK");
 })().catch((err) => {
