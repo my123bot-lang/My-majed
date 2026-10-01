@@ -219,15 +219,15 @@ module.exports = {
     branchEmployeePhone: "0507009290",
     /** باقة عقاري + شخصي — عند قبول العرض والتواصل (مستنفذ بدون عقاري) */
     propertyComboAgentName: "المسؤول العقاري",
-    propertyComboAgentPhone: "0506279834",
+    propertyComboAgentPhone: "0566817985",
     propertyComboAgentPhone2: "0546473109",
-    propertyComboAgentPhones: ["0506279834", "0546473109"],
+    propertyComboAgentPhones: ["0566817985", "0546473109"],
     propertyComboContactFooter: "من طرف ماجد\nبالتوفيق ربي ييسر أمرك",
     /** أرقام مسار إيقاف الخدمات بعد قبول الباقة */
-    serviceStopContactPhones: ["0506279834", "0546473109"],
+    serviceStopContactPhones: ["0566817985", "0546473109"],
     /** إيقاف الخدمات — المندوب عند رغبة العميل بالتواصل */
     serviceStopAgentName: "أبو تركي",
-    serviceStopAgentPhone: "0506279834",
+    serviceStopAgentPhone: "0566817985",
     serviceStopContactHint: "من طرف ماجد",
   },
 
