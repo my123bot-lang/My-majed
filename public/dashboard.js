@@ -1,4 +1,8 @@
 (function () {
+  if (/MajedAndroid/i.test(navigator.userAgent) || window.MajedAndroid) {
+    document.documentElement.classList.add("android-app");
+  }
+
   const TOKEN_KEY = "adminToken";
   const LEGACY_KEY = "legacyPass";
   const ROLE_LABELS = { admin: "مدير", editor: "محرر", viewer: "عرض فقط" };
@@ -45,6 +49,14 @@
     const legacy = sessionStorage.getItem(LEGACY_KEY);
     if (legacy) h["X-Admin-Password"] = legacy;
     return h;
+  }
+
+  async function copyToClipboard(text) {
+    if (window.MajedAndroid && typeof window.MajedAndroid.copyText === "function") {
+      window.MajedAndroid.copyText(text || "");
+      return;
+    }
+    await navigator.clipboard.writeText(text || "");
   }
 
   async function api(path, options = {}) {
@@ -1245,7 +1257,7 @@
       if (selectedLeadsWa) params.set("waAccountId", selectedLeadsWa);
       const pack = await api("/api/leads?" + params.toString());
       const phones = (pack.phones || []).map((r) => r.phone).join("\n");
-      await navigator.clipboard.writeText(phones || "");
+      await copyToClipboard(phones || "");
       showToast(phones ? `تم نسخ ${pack.count} رقم` : "لا توجد أرقام اليوم", Boolean(phones));
     } catch (err) {
       showToast(err.message, false);
@@ -1254,13 +1266,28 @@
 
   $("exportLeadsBtn")?.addEventListener("click", async () => {
     try {
+      const backupName = `customers-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      if (window.MajedAndroid && typeof window.MajedAndroid.downloadAuthorized === "function") {
+        window.MajedAndroid.downloadAuthorized(
+          "/api/leads/export",
+          backupName,
+          getToken(),
+          sessionStorage.getItem(LEGACY_KEY) || ""
+        );
+        const st = $("backupStatus");
+        if (st) {
+          st.classList.remove("hidden");
+          st.textContent = "جاري حفظ النسخة في مجلد التنزيلات…";
+        }
+        return;
+      }
       const res = await fetch("/api/leads/export", { headers: headers(false) });
       if (!res.ok) throw new Error("فشل التنزيل");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `customers-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = backupName;
       a.click();
       URL.revokeObjectURL(url);
       const st = $("backupStatus");

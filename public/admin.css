@@ -1851,3 +1851,12 @@ code {
     max-width: none;
   }
 }
+
+.android-app #desktopOpsCard,
+.android-app .app-topbar {
+  display: none;
+}
+
+.android-app .main {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
