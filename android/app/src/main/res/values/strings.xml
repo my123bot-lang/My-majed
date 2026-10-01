@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ماجد</string>
+    <string name="subtitle">لوحة التحكم</string>
+    <string name="default_server_url">https://moss-brook-king-blaze.grok.me</string>
+    <string name="refresh">تحديث</string>
+    <string name="server_url">رابط الخادم</string>
+    <string name="clear_session">مسح الجلسة</string>
+    <string name="error_title">تعذر فتح اللوحة</string>
+    <string name="error_body">تأكد من الاتصال بالإنترنت، أو غيّر رابط الخادم إذا تغيّر عنوان الموقع.</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="change_server">تغيير الرابط</string>
+    <string name="save_open">حفظ وفتح</string>
+    <string name="cancel">إلغاء</string>
+    <string name="invalid_url">الرابط غير صالح</string>
+    <string name="copied">تم النسخ</string>
+    <string name="download_started">بدأ التنزيل</string>
+    <string name="download_saved">تم حفظ %1$s في التنزيلات</string>
+    <string name="download_failed">تعذر حفظ الملف</string>
+    <string name="no_app">لا يوجد تطبيق لفتح هذا الرابط</string>
+    <string name="clear_title">مسح الجلسة</string>
+    <string name="clear_message">سيتم تسجيل الخروج من اللوحة على هذا الجهاز وحذف البيانات المحفوظة في التطبيق.</string>
+    <string name="clear_confirm">مسح</string>
+    <string name="session_cleared">تم مسح الجلسة</string>
+    <string name="storage_permission">يلزم السماح بحفظ الملفات في التنزيلات</string>
+    <string name="server_help">الصق رابط لوحة التحكم. إذا تغيّر عنوان الموقع، حدّثه من هنا.</string>
+    <string name="server_hint">https://example.com</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="navy">#0C1222</color>
+    <color name="teal">#0D9488</color>
+    <color name="teal_bright">#14B8A6</color>
+    <color name="white">#FFFFFF</color>
+    <color name="muted">#94A3B8</color>
+    <color name="muted_dark">#64748B</color>
+    <color name="text">#0F172A</color>
+    <color name="bg">#EEF2F7</color>
+</resources>
