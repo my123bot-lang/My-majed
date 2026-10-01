@@ -844,7 +844,7 @@ ${personalFormatted} ريال شخصي
 
     propertyComboAgentDirect: (phone1, phone2, footer) => {
       const phones = visibleContactPhones(phone1, phone2);
-      return `للتواصل مع المسؤول العقاري:\n${phones.join("\n")}\n\n${footer}`;
+      return `للتواصل مع موظف الشركة العقارية:\n${phones.join("\n")}\n\n${footer}`;
     },
 
     debtPurchaseOffer: (
