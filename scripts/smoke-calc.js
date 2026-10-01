@@ -24,7 +24,10 @@ function ok(cond, msg) {
 
 const rates = ratesInfo();
 ok(rates.ok, "ratesInfo");
-ok(rates.personal.military === 18.5, "military rate 18.5");
+ok(rates.personal.military === 17, "military rate 17");
+ok(rates.personal.civilian === 14.5, "civilian rate 14.5");
+ok(rates.personal.retired === 14.5, "retired rate 14.5");
+ok(rates.personal.private === 16.5, "private rate 16.5");
 ok(rates.debtPurchase === 12, "debt rate 12");
 
 const personal = personalFinanceCalc({
@@ -83,7 +86,7 @@ ok(
         realEstate: "none",
       },
       military.result.rawAmount,
-      18.5,
+      rates.personal.military,
       "military"
     ),
   "bridge military amount is affordability-capped"
@@ -102,5 +105,31 @@ ok(debt.result.surplus >= 0, "debt surplus");
 
 const qist = installmentCalc({ amount: 10000, interestRate: 13, jobCategory: "civilian" });
 ok(qist.ok && qist.result.installment === 275, `installment 10k@13%=${qist.result.installment}`);
+
+const civilianOffer = personalFinanceCalc({
+  jobCategory: "civilian",
+  civilianSector: "government",
+  salary: 10000,
+  commitments: 0,
+  realEstate: "none",
+});
+ok(civilianOffer.inputs.interestRate === 14.5, "government civilian uses 14.5");
+
+const privateOffer = personalFinanceCalc({
+  jobCategory: "civilian",
+  civilianSector: "private",
+  salary: 10000,
+  commitments: 0,
+  realEstate: "none",
+});
+ok(privateOffer.inputs.interestRate === 16.5, "private sector uses 16.5");
+
+const retiredOffer = personalFinanceCalc({
+  jobCategory: "retired",
+  salary: 10000,
+  commitments: 0,
+  realEstate: "none",
+});
+ok(retiredOffer.inputs.interestRate === 14.5, "retired uses 14.5");
 
 console.log("\nAll calc bridge smoke tests passed.");
