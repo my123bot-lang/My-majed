@@ -349,6 +349,11 @@ async function main() {
     false,
     "رقم عميل/تواصل 0506279834 يجب ألا يكون تحكم تلقائياً"
   );
+  assert.strictEqual(
+    isOwnerControlPhone("0566817985"),
+    false,
+    "رقم المسؤول العقاري 0566817985 يجب ألا يكون تحكم تلقائياً"
+  );
 
   // أوامر المالك عن بُعد (جوال شخصي منفصل فقط)
   process.env.OWNER_CONTROL_PHONES = "966509998887";
