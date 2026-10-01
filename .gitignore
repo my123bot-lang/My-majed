@@ -38,4 +38,4 @@ android/app/build/
 android/local.properties
 *.apk
 *.aab
-!android/majed.apk
+!android/may.apk

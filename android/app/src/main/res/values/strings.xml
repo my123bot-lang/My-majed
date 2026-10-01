@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ماجد</string>
+    <string name="app_name">May</string>
     <string name="subtitle">لوحة التحكم</string>
     <string name="default_server_url">https://moss-brook-king-blaze.grok.me</string>
     <string name="refresh">تحديث</string>
