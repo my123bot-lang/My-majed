@@ -839,9 +839,7 @@ ${personalFormatted} ريال شخصي
 
     serviceStopTwoAgents: (phone1, phone2) => {
       const phones = visibleContactPhones(phone1, phone2);
-      const title =
-        phones.length > 1 ? "للتواصل مع المندوبين:" : "للتواصل مع المندوب:";
-      return `${title}\n\n${phones.join("\n")}\n\nمن طرف ماجد\nربي يسر أمرك`;
+      return `للتواصل مع موظف الشركة العقارية:\n\n${phones.join("\n")}\n\nمن طرف ماجد\nربي يسر أمرك`;
     },
 
     propertyComboAgentDirect: (phone1, phone2, footer) => {
