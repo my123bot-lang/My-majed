@@ -11,6 +11,15 @@
  * =============================================================================
  */
 
+function visibleContactPhones(phone1, phone2) {
+  const phones = [];
+  for (const phone of [phone1, phone2]) {
+    const value = String(phone || "").trim();
+    if (value && !phones.includes(value)) phones.push(value);
+  }
+  return phones;
+}
+
 module.exports = {
   // ---------------------------------------------------------------------------
   // عام
@@ -220,11 +229,11 @@ module.exports = {
     /** باقة عقاري + شخصي — عند قبول العرض والتواصل (مستنفذ بدون عقاري) */
     propertyComboAgentName: "المسؤول العقاري",
     propertyComboAgentPhone: "0566817985",
-    propertyComboAgentPhone2: "0546473109",
-    propertyComboAgentPhones: ["0566817985", "0546473109"],
+    propertyComboAgentPhone2: "",
+    propertyComboAgentPhones: ["0566817985"],
     propertyComboContactFooter: "من طرف ماجد\nبالتوفيق ربي ييسر أمرك",
     /** أرقام مسار إيقاف الخدمات بعد قبول الباقة */
-    serviceStopContactPhones: ["0566817985", "0546473109"],
+    serviceStopContactPhones: ["0566817985"],
     /** إيقاف الخدمات — المندوب عند رغبة العميل بالتواصل */
     serviceStopAgentName: "أبو تركي",
     serviceStopAgentPhone: "0566817985",
@@ -828,21 +837,17 @@ ${personalFormatted} ريال شخصي
 
 يعني 60% كاش حسب حسبتك بالبنك`,
 
-    serviceStopTwoAgents: (phone1, phone2) =>
-      `للتواصل مع المندوبين:
+    serviceStopTwoAgents: (phone1, phone2) => {
+      const phones = visibleContactPhones(phone1, phone2);
+      const title =
+        phones.length > 1 ? "للتواصل مع المندوبين:" : "للتواصل مع المندوب:";
+      return `${title}\n\n${phones.join("\n")}\n\nمن طرف ماجد\nربي يسر أمرك`;
+    },
 
-${phone1}
-${phone2}
-
-من طرف ماجد
-ربي يسر أمرك`,
-
-    propertyComboAgentDirect: (phone1, phone2, footer) =>
-      `للتواصل مع المسؤول العقاري:
-${phone1}
-${phone2}
-
-${footer}`,
+    propertyComboAgentDirect: (phone1, phone2, footer) => {
+      const phones = visibleContactPhones(phone1, phone2);
+      return `للتواصل مع المسؤول العقاري:\n${phones.join("\n")}\n\n${footer}`;
+    },
 
     debtPurchaseOffer: (
       debtFormatted,
