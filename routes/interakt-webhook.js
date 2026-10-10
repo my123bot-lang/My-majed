@@ -29,6 +29,7 @@ const {
 const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
 const { rememberActiveCustomer } = require("../lib/last-active-customer");
 const customerLeads = require("../lib/customer-leads");
+const { enqueueTurn } = require("../lib/inbound-turn-queue");
 
 const router = express.Router();
 
@@ -138,9 +139,12 @@ async function processInbound(inbound) {
     }
   }
 
+  const ownerPhone = isOwnerControlPhone(inbound.phone);
   // لا تُسجَّل أرقام التحكم كـ «آخر عميل» حتى يبقى Stop/زر القائمة موجّهاً للعملاء
-  if (!isOwnerControlPhone(inbound.phone)) {
-    rememberActiveCustomer(inbound.phone);
+  if (!ownerPhone) rememberActiveCustomer(inbound.phone);
+
+  const recordLead = () => {
+    if (ownerPhone) return;
     try {
       customerLeads.recordInboundMessage(inbound.phone, {
         text: inbound.body || "",
@@ -148,7 +152,7 @@ async function processInbound(inbound) {
     } catch (err) {
       console.warn("[interakt] تعذر حفظ الوارد في السجل:", err.message);
     }
-  }
+  };
 
   if (!inbound.body) {
     if (
@@ -157,6 +161,7 @@ async function processInbound(inbound) {
         extraKeys: [inbound.phone],
       })
     ) {
+      recordLead();
       return;
     }
     const msg = createInteraktMessage({
@@ -164,7 +169,11 @@ async function processInbound(inbound) {
       body: "",
       messageId: inbound.messageId,
     });
-    await replyToMessage(msg, messages.nonTextMessage());
+    try {
+      await replyToMessage(msg, messages.nonTextMessage());
+    } finally {
+      recordLead();
+    }
     return;
   }
 
@@ -178,6 +187,7 @@ async function processInbound(inbound) {
 
   if (!autoReplyControl.isEnabled()) {
     console.log("[interakt] الرد الآلي متوقف عاماً");
+    recordLead();
     return;
   }
 
@@ -187,10 +197,17 @@ async function processInbound(inbound) {
     })
   ) {
     console.log("[interakt] محادثة متوقفة:", inbound.phone);
+    recordLead();
     return;
   }
 
   if (sessionStore.shouldThrottle(chatId, inbound.body)) {
+    console.log(
+      "[interakt] تجاهل تكرار سريع:",
+      String(inbound.phone || "").slice(-4),
+      String(inbound.body || "").slice(0, 40)
+    );
+    recordLead();
     return;
   }
 
@@ -199,6 +216,8 @@ async function processInbound(inbound) {
   } catch (err) {
     console.error("[interakt] خطأ معالجة:", err);
     await replyToMessage(msg, messages.temporaryErrorMessage()).catch(() => {});
+  } finally {
+    recordLead();
   }
 }
 
@@ -303,9 +322,11 @@ router.post("/", (req, res) => {
       /* ignore */
     }
     setImmediate(() => {
-      processInbound(inbound).catch((err) =>
-        console.error("[interakt] فشل غير متزامن:", err)
-      );
+      enqueueTurn(
+        inbound.phone || inbound.messageId || "interakt",
+        { body: inbound.body, messageId: inbound.messageId },
+        () => processInbound(inbound)
+      ).catch((err) => console.error("[interakt] فشل غير متزامن:", err));
     });
     return;
   }

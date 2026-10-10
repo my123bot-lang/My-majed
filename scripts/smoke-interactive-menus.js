@@ -12,7 +12,14 @@ const {
   listRowsForWhatsApp,
   normalizeInteractiveBody,
 } = require("../lib/interactive-menu");
-const { collectPhoneAttempts, splitPhone, isSessionWindowError } = require("../lib/interakt-client");
+const {
+  collectPhoneAttempts,
+  splitPhone,
+  isSessionWindowError,
+  isTimeoutError,
+  orderInteractiveVariants,
+  rememberInteractiveType,
+} = require("../lib/interakt-client");
 const { createMetaMessage } = require("../lib/meta-adapter");
 const { parseInquiryType } = require("../lib/validators");
 
@@ -186,6 +193,17 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     !isSessionWindowError({ message: "invalid session token" }),
     "كلمة session العامة لا تُعتبر خطأ نافذة 24 ساعة"
   );
+  ok(
+    isTimeoutError({ status: 408, message: "Interakt timeout after 2500ms" }),
+    "مهلة الإرسال تُكتشف حتى نرجع للنص"
+  );
+  rememberInteractiveType("list", "List");
+  const ordered = orderInteractiveVariants("list", [
+    { type: "InteractiveList" },
+    { type: "List" },
+  ]);
+  ok(ordered[0].type === "List", "نوع القائمة الذي نجح سابقاً يُجرَّب أولاً");
+  rememberInteractiveType("list", "");
 
   console.log("smoke-interactive-menus: OK");
 })().catch((err) => {
