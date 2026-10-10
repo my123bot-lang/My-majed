@@ -34,6 +34,16 @@ const {
 const { resolvePhoneFromMessage } = require("./lib/contact-phone");
 const { rememberActiveCustomer } = require("./lib/last-active-customer");
 const { markBotOutbound } = require("./lib/bot-outbound-guard");
+const { enqueueTurn } = require("./lib/inbound-turn-queue");
+
+function inboundMessageId(msg) {
+  const id = msg?.id;
+  if (!id) return "";
+  if (typeof id === "string") return id;
+  if (id._serialized) return String(id._serialized);
+  if (id.id) return String(id.id);
+  return "";
+}
 
 function resolveWaAccount() {
   const fromEnv = process.env.WA_ACCOUNT_ID || process.argv[2];
@@ -330,8 +340,11 @@ async function handleCustomerMessage(msg) {
 
   const skip = shouldSkipInboundMessage(msg);
   if (skip.skip) {
-    console.log("تجاهل رسالة (بدون رد):", from, "|", skip.reason, "|", preview);
-    return;
+    const inSession = Boolean(sessionStore.getSession(from));
+    if (!(skip.reason === "duplicate_body" && inSession)) {
+      console.log("تجاهل رسالة (بدون رد):", from, "|", skip.reason, "|", preview);
+      return;
+    }
   }
 
   // اربط @lid برقم الجوال قبل فحص الإيقاف حتى لا يفلت العميل الموقوف
@@ -347,18 +360,21 @@ async function handleCustomerMessage(msg) {
   } catch (_) {
     /* ignore */
   }
-  try {
-    customerLeads.recordInboundMessage(phoneHint || from, {
-      text: String(msg.body || ""),
-    });
-  } catch (err) {
-    console.warn("تعذر حفظ الوارد في السجل:", err.message);
-  }
+  const recordLead = () => {
+    try {
+      customerLeads.recordInboundMessage(phoneHint || from, {
+        text: String(msg.body || ""),
+      });
+    } catch (err) {
+      console.warn("تعذر حفظ الوارد في السجل:", err.message);
+    }
+  };
 
   // إيقاف/تشغيل الرد الآلي للمالك فقط — العميل لا يوقف البوت بـ stop/start
 
   if (!autoReplyControl.isEnabled()) {
     console.log("الرد الآلي متوقف — تجاهل رسالة من:", from);
+    recordLead();
     return;
   }
 
@@ -372,23 +388,29 @@ async function handleCustomerMessage(msg) {
     })
   ) {
     console.log("رد آلي موقوف لهذه المحادثة — تجاهل:", from);
+    recordLead();
     return;
   }
 
   if (sessionStore.shouldThrottle(from, String(msg.body || ""))) {
     console.log("تجاهل رسالة سريعة من:", from);
+    recordLead();
     return;
   }
 
   callStats.recordInboundContact();
-  const replied = await handleIncomingMessage(msg);
-  if (!replied) {
-    console.warn(
-      "لم يُرسل رد — من:",
-      from,
-      "| نص:",
-      String(msg.body || "").slice(0, 80)
-    );
+  try {
+    const replied = await handleIncomingMessage(msg);
+    if (!replied) {
+      console.warn(
+        "لم يُرسل رد — من:",
+        from,
+        "| نص:",
+        String(msg.body || "").slice(0, 80)
+      );
+    }
+  } finally {
+    recordLead();
   }
 }
 
@@ -402,7 +424,11 @@ client.on("message", async (msg) => {
     if (await handleOwnerMessage(msg)) return;
     if (msg.fromMe) return;
 
-    await handleCustomerMessage(msg);
+    await enqueueTurn(
+      from,
+      { body: String(msg.body || ""), messageId: inboundMessageId(msg) },
+      () => handleCustomerMessage(msg)
+    );
   } catch (error) {
     console.error("BOT ERROR:", error);
     try {

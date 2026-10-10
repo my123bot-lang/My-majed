@@ -27,6 +27,7 @@ const {
   tryHandleOwnerRemoteControl,
   isOwnerControlPhone,
 } = require("../lib/owner-remote-control");
+const { enqueueTurn } = require("../lib/inbound-turn-queue");
 
 const router = express.Router();
 
@@ -79,7 +80,7 @@ async function processInbound(inbound) {
   const chatId = `${inbound.phone}@c.us`;
 
   if (inbound.messageId && isConfigured()) {
-    await markAsRead(inbound.messageId).catch(() => {});
+    markAsRead(inbound.messageId).catch(() => {});
   }
 
   if (inbound.body && isOwnerControlPhone(inbound.phone)) {
@@ -127,6 +128,11 @@ async function processInbound(inbound) {
   }
 
   if (sessionStore.shouldThrottle(chatId, inbound.body)) {
+    console.log(
+      "[meta] تجاهل تكرار سريع:",
+      String(inbound.phone || "").slice(-4),
+      String(inbound.body || "").slice(0, 40)
+    );
     return;
   }
 
@@ -191,9 +197,11 @@ router.post("/", (req, res) => {
 
   for (const inbound of inboundList) {
     setImmediate(() => {
-      processInbound(inbound).catch((err) =>
-        console.error("[meta] فشل غير متزامن:", err)
-      );
+      enqueueTurn(
+        inbound.phone || inbound.messageId || "meta",
+        { body: inbound.body, messageId: inbound.messageId },
+        () => processInbound(inbound)
+      ).catch((err) => console.error("[meta] فشل غير متزامن:", err));
     });
   }
 });

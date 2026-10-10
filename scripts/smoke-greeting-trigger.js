@@ -41,6 +41,10 @@ ok(
   "extended السلام عليكم opens the menu for a new customer"
 );
 ok(isPoliteGreeting("السلام عليكم"), "isPoliteGreeting: السلام عليكم");
+ok(isPoliteGreeting("سلام"), "isPoliteGreeting: سلام");
+ok(isPoliteGreeting("السلام"), "isPoliteGreeting: السلام");
+ok(matchesStartKeyword("سلام", KEYWORDS), "سلام وحدها تفتح القائمة");
+ok(matchesStartKeyword("السلام", KEYWORDS), "السلام وحدها تفتح القائمة");
 ok(isPoliteGreeting("أهلا"), "isPoliteGreeting: أهلا");
 ok(!isPoliteGreeting("1"), "isPoliteGreeting does not treat 1 as a greeting");
 ok(!matchesStartKeyword("101234567", KEYWORDS), "order number starting with 1 does NOT match");
@@ -144,6 +148,82 @@ function mockMsg(from, body) {
     "كلمة بدء ثانية في نفس اللحظة تُحظر حتى لا تتكرر القائمة"
   );
   sessionStore.clearSession(burstFrom);
+
+  const fastFrom = "966501110004@c.us";
+  sessionStore.clearSession(fastFrom);
+  sessionStore.startSession(fastFrom);
+  const fastSession = sessionStore.getSession(fastFrom);
+  fastSession.step = "inquiry_type";
+  ok(
+    sessionStore.shouldThrottle(fastFrom, "تمويل شخصي") === false,
+    "اختيار القائمة بالعنوان لا يُحظر خلال ثانية"
+  );
+  fastSession.step = "salary";
+  ok(
+    sessionStore.shouldThrottle(fastFrom, "8500") === false,
+    "الراتب بعد الاختيار مباشرة لا يُحظر"
+  );
+  ok(
+    sessionStore.shouldThrottle(fastFrom, "8500") === true,
+    "تكرار نفس الراتب في نفس الخطوة يُحظر"
+  );
+  fastSession.step = "commitments";
+  ok(
+    sessionStore.shouldThrottle(fastFrom, "8500") === false,
+    "نفس الرقم في خطوة جديدة لا يُحظر"
+  );
+  sessionStore.clearSession(fastFrom);
+
+  const salamOnlyFrom = "966501110005@c.us";
+  sessionStore.clearSession(salamOnlyFrom);
+  const salamOnly = mockMsg(salamOnlyFrom, "سلام");
+  const salamOnlyHandled = await handleIncomingMessage(salamOnly.msg);
+  ok(salamOnlyHandled === true, "سلام وحدها تفتح القائمة لعميل جديد");
+  ok(salamOnly.sent.menus.length >= 1, "تُرسل القائمة بعد سلام");
+  sessionStore.clearSession(salamOnlyFrom);
+
+  const { enqueueTurn } = require("../lib/inbound-turn-queue");
+  const turnOrder = [];
+  let releaseFirst;
+  const gate = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  const firstTurn = enqueueTurn(
+    "966500000111",
+    { body: "مرحبا", messageId: "m1" },
+    async () => {
+      turnOrder.push("start");
+      await gate;
+      turnOrder.push("start-done");
+    }
+  );
+  const dupTurn = enqueueTurn(
+    "966500000111",
+    { body: "مرحبا", messageId: "m2" },
+    async () => {
+      turnOrder.push("dup");
+    }
+  );
+  const nextTurn = enqueueTurn(
+    "966500000111",
+    { body: "1", messageId: "m3" },
+    async () => {
+      turnOrder.push("one");
+    }
+  );
+  ok(turnOrder[0] === "start", "رد التحية يبدأ قبل ما يكتمل الإرسال");
+  const dupResult = await dupTurn;
+  ok(
+    dupResult && dupResult.skipped === "duplicate_inflight",
+    "تكرار نفس النص أثناء الرد لا يُعالج مرتين"
+  );
+  releaseFirst();
+  await firstTurn;
+  await nextTurn;
+  ok(
+    turnOrder.join(",") === "start,start-done,one",
+    "اختيار العميل يُعالج بعد اكتمال رد التحية وبالترتيب"
+  );
 
   console.log("smoke-greeting-trigger: OK");
 })().catch((err) => {
