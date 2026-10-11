@@ -19,6 +19,7 @@ const {
   isTimeoutError,
   orderInteractiveVariants,
   rememberInteractiveType,
+  nextInteractiveAttempt,
 } = require("../lib/interakt-client");
 const { createMetaMessage } = require("../lib/meta-adapter");
 const { parseInquiryType } = require("../lib/validators");
@@ -204,6 +205,36 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
   ]);
   ok(ordered[0].type === "List", "نوع القائمة الذي نجح سابقاً يُجرَّب أولاً");
   rememberInteractiveType("list", "");
+
+  ok(
+    nextInteractiveAttempt("list", {}) === "list",
+    "القائمة تُجرَّب أولاً عندما لا يكون هناك فشل"
+  );
+  ok(
+    nextInteractiveAttempt("list", { listFailed: true }) === "buttons",
+    "مهلة القائمة أو رفضها يحوّل نفس الخيارات إلى أزرار لا إلى نص"
+  );
+  ok(
+    nextInteractiveAttempt("list", { listPaused: true }) === "buttons",
+    "بعد إيقاف القائمة مؤقتاً نرسل أزراراً بدون انتظار القائمة"
+  );
+  ok(
+    nextInteractiveAttempt("buttons", { listPaused: true, listFailed: true }) ===
+      "buttons",
+    "فشل القائمة لا يوقف قوالب الأزرار مثل سنوات التمويل أو طريقة التقديم"
+  );
+  ok(
+    nextInteractiveAttempt("list", {
+      listFailed: true,
+      buttonsPaused: true,
+    }) === "text",
+    "النص المرقّم فقط إذا فشلت الأزرار أيضاً"
+  );
+  ok(
+    nextInteractiveAttempt("list", { sessionWindow: true }) === "text" &&
+      nextInteractiveAttempt("buttons", { sessionWindow: true }) === "text",
+    "خارج نافذة 24 ساعة لا نعيد محاولة التفاعل"
+  );
 
   console.log("smoke-interactive-menus: OK");
 })().catch((err) => {
