@@ -115,6 +115,25 @@ ok(
   "النص البديل بنفس أرقام الخيارات"
 );
 
+const sectorText = menuToText(menus.civilianSector());
+ok(
+  sectorText.includes("اختر نوع الجهة:") &&
+    sectorText.includes("1- حكومي") &&
+    sectorText.includes("2- قطاع خاص") &&
+    !sectorText.includes("civ_gov") &&
+    !sectorText.includes("civ_private"),
+  "إذا فشلت أزرار نوع الجهة يظهر ترقيم للعميل بدون المعرف الداخلي"
+);
+
+const jobText = menuToText(menus.jobType());
+ok(
+  jobText.includes("1- مدني") &&
+    jobText.includes("2- عسكري") &&
+    jobText.includes("3- متقاعد") &&
+    !jobText.includes("job_civilian"),
+  "النص البديل للقطاع بأرقام، ومعرف الزر يبقى داخلياً"
+);
+
 ok(
   parseInquiryType("تمويل شخصي") === "personal" &&
     parseInquiryType("1") === "personal",
