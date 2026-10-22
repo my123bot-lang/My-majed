@@ -4,7 +4,13 @@
  */
 const assert = require("assert");
 const menus = require("../lib/menus");
-const { menuToText, replyMenu } = require("../lib/reply");
+const { menuToText, replyMenu, setPollFactory } = require("../lib/reply");
+const {
+  buildMenuPollSpec,
+  rememberMenuPoll,
+  resolveMenuPollVote,
+  resetMenuPolls,
+} = require("../lib/menu-poll");
 const {
   buildListMessageData,
   buildButtonMessageData,
@@ -192,6 +198,91 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     fallbackText.includes("1- تمويل شخصي"),
     "إذا فشل التفاعلي يُرسل النص المرقّم حتى لا يصمت البوت"
   );
+
+  const spec = buildMenuPollSpec(main);
+  ok(
+    spec &&
+      spec.question.includes("مانوع استفسارك") &&
+      spec.options.length === 7 &&
+      spec.options[0] === "تمويل شخصي" &&
+      spec.options[6] === "سياسة الرواتب المطلوبة" &&
+      !spec.options.some((name) => /^\d+-/.test(name)),
+    "واتساب ويب يحوّل القائمة إلى خيارات تُضغط بدون ترقيم"
+  );
+  ok(
+    buildMenuPollSpec(menus.yesNo("هل ترغب؟")).options.join(",") === "نعم,لا",
+    "سؤال نعم/لا يصير خيارين قابلين للضغط"
+  );
+
+  setPollFactory((question, options) => ({ question, options }));
+  let tapped = null;
+  await replyMenu(
+    {
+      from: "966501234567@c.us",
+      client: {},
+      reply: async (content) => {
+        tapped = content;
+        return { id: { _serialized: "POLL123" } };
+      },
+    },
+    main
+  );
+  ok(
+    tapped && tapped.options[0] === "تمويل شخصي" && tapped.options.length === 7,
+    "replyMenu على واتساب ويب يرسل الخيارات القابلة للضغط لا النص المرقم"
+  );
+
+  let numberedAfterPollFail = "";
+  setPollFactory(() => {
+    throw new Error("poll rejected");
+  });
+  await replyMenu(
+    {
+      from: "966501234567@c.us",
+      client: {},
+      reply: async (body) => {
+        numberedAfterPollFail = body;
+      },
+    },
+    main
+  );
+  ok(
+    numberedAfterPollFail.includes("1- تمويل شخصي"),
+    "إذا فشل الاختيار القابل للضغط نرجع للنص المرقم"
+  );
+  setPollFactory(null);
+
+  resetMenuPolls();
+  const savedId = rememberMenuPoll(
+    { id: { _serialized: "POLL123" } },
+    spec,
+    "966501234567@c.us"
+  );
+  ok(savedId === "POLL123", "يُحفظ معرّف رسالة الاختيار");
+  const picked = resolveMenuPollVote({
+    voter: "966501234567@lid",
+    selectedOptions: [{ name: "تمويل شخصي" }],
+    parentMessage: { id: { _serialized: "POLL123" }, fromMe: true, to: "ignored" },
+  });
+  ok(
+    picked &&
+      picked.chatId === "966501234567@c.us" &&
+      picked.body === "تمويل شخصي" &&
+      picked.selectedId === "1",
+    "ضغط الخيار يرجع عنوانه ومعرفه لنفس مسار القائمة"
+  );
+  ok(
+    resolveMenuPollVote(
+      {
+        voter: "966507009290@c.us",
+        selectedOptions: [{ name: "تمويل شخصي" }],
+        parentMessage: { id: { _serialized: "POLL123" } },
+      },
+      { selfIds: ["966507009290@c.us"] }
+    ) === null,
+    "تصويت رقم البوت نفسه لا يُعالج كرد عميل"
+  );
+  resetMenuPolls();
 
   const metaMsg = createMetaMessage({
     phone: "966501234567",

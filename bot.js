@@ -35,6 +35,7 @@ const { resolvePhoneFromMessage } = require("./lib/contact-phone");
 const { rememberActiveCustomer } = require("./lib/last-active-customer");
 const { markBotOutbound } = require("./lib/bot-outbound-guard");
 const { enqueueTurn } = require("./lib/inbound-turn-queue");
+const { resolveMenuPollVote } = require("./lib/menu-poll");
 
 function inboundMessageId(msg) {
   const id = msg?.id;
@@ -438,6 +439,53 @@ client.on("message", async (msg) => {
     } catch (_) {
       /* ignore */
     }
+  }
+});
+
+/**
+ * ضغط العميل على خيار القائمة (استطلاع واتساب ويب).
+ * يُعامل كأنه كتب عنوان الخيار، فيكمل نفس مسار الأزرار.
+ */
+client.on("vote_update", async (vote) => {
+  try {
+    const wid = client.info?.wid;
+    const selection = resolveMenuPollVote(vote, {
+      selfIds: [wid?._serialized, wid?.user].filter(Boolean),
+    });
+    if (!selection) return;
+
+    const chatId = selection.chatId;
+    if (!chatId || chatId.includes("@g.us") || chatId.includes("broadcast")) {
+      return;
+    }
+
+    const messageId = `poll_${selection.pollId || "menu"}_${selection.voter}_${selection.selectedId || selection.body}`;
+    const synthetic = {
+      from: chatId,
+      to: wid?._serialized || "",
+      body: selection.body,
+      type: "chat",
+      fromMe: false,
+      selectedButtonId: selection.selectedId,
+      selectedRowId: selection.selectedId,
+      title: selection.body,
+      id: { _serialized: messageId, id: messageId },
+      client,
+      reply: (content, _unused, options) =>
+        client.sendMessage(chatId, content, options),
+      getChat: () => client.getChatById(chatId),
+      getContact: () =>
+        typeof client.getContactById === "function"
+          ? client.getContactById(chatId)
+          : Promise.reject(new Error("no contact")),
+    };
+
+    console.log("اختيار من القائمة:", chatId, "|", selection.body);
+    await enqueueTurn(chatId, { body: selection.body, messageId }, () =>
+      handleCustomerMessage(synthetic)
+    );
+  } catch (error) {
+    console.error("POLL VOTE ERROR:", error);
   }
 });
 
