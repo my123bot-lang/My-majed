@@ -217,6 +217,7 @@ async function processOutboundQueue() {
   try {
     const st = botStatus.getStatusForAccount(activeWaAccount.id);
     if (st.status !== "ready") return;
+    if (!autoReplyControl.isEnabled()) return;
 
     const batch = outboundQueue.claimPending(activeWaAccount.id, 1);
     for (const item of batch) {

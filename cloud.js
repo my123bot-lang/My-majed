@@ -24,6 +24,16 @@ console.log(
 );
 console.log("  Admin / portal: GET  /");
 logOwnerControlBanner(" ");
+try {
+  const autoReplyControl = require("./lib/auto-reply-control");
+  if (autoReplyControl.isServiceHeld()) {
+    console.log(
+      "  إيقاف مؤقت:     ",
+      autoReplyControl.holdReason(),
+      "— لا ردود ولا متابعات"
+    );
+  }
+} catch (_) {}
 console.log("============================================");
 console.log("");
 
