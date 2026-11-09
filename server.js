@@ -143,6 +143,17 @@ app.get("/api/health", (_req, res) => {
   } catch (_) {
     metaWebhook = { sendConfigured: false };
   }
+  let serviceHold = { suspended: false, reason: null };
+  try {
+    const autoReplyControl = require("./lib/auto-reply-control");
+    serviceHold = {
+      suspended: autoReplyControl.isServiceHeld(),
+      reason: autoReplyControl.isServiceHeld()
+        ? autoReplyControl.holdReason()
+        : null,
+      autoReply: autoReplyControl.statusLabel(),
+    };
+  } catch (_) {}
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
@@ -150,6 +161,7 @@ app.get("/api/health", (_req, res) => {
     gitBranch: process.env.RENDER_GIT_BRANCH || process.env.GIT_BRANCH || null,
     menuStartOnly: true,
     deployedAt: new Date().toISOString(),
+    serviceHold,
     ownerControl,
     metaWebhook,
     humanTakeoverOnReply: String(process.env.HUMAN_TAKEOVER_ON_REPLY || "1"),
@@ -390,12 +402,24 @@ app.get("/api/health", (_req, res) => {
   } catch (_) {
     metaWebhook = { sendConfigured: false };
   }
+  let serviceHold = { suspended: false, reason: null };
+  try {
+    const autoReplyControl = require("./lib/auto-reply-control");
+    serviceHold = {
+      suspended: autoReplyControl.isServiceHeld(),
+      reason: autoReplyControl.isServiceHeld()
+        ? autoReplyControl.holdReason()
+        : null,
+      autoReply: autoReplyControl.statusLabel(),
+    };
+  } catch (_) {}
   res.json({
     ok: true,
     service: "whatsapp-bot-admin",
     features: { deleteLead: true, menuStartOnly: true },
     gitCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || null,
     gitBranch: process.env.RENDER_GIT_BRANCH || process.env.GIT_BRANCH || null,
+    serviceHold,
     ownerControl,
     metaWebhook,
   });

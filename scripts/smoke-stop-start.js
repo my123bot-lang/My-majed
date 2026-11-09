@@ -477,6 +477,28 @@ async function main() {
   if (prevOwnerEnv === undefined) delete process.env.OWNER_CONTROL_PHONES;
   else process.env.OWNER_CONTROL_PHONES = prevOwnerEnv;
 
+  const prevHold = process.env.BOT_SUSPENDED;
+  delete process.env.BOT_SUSPENDED;
+  assert.strictEqual(
+    autoReplyControl.isServiceHeld(),
+    true,
+    "الإيقاف المؤقت مثبت في الإعدادات"
+  );
+  assert.strictEqual(autoReplyControl.isEnabled(), false);
+  assert.strictEqual(autoReplyControl.enable(), false);
+  assert.strictEqual(
+    autoReplyControl.holdReason(),
+    "إيقاف مؤقت إلى إشعار آخر"
+  );
+  process.env.BOT_SUSPENDED = "0";
+  assert.strictEqual(autoReplyControl.isServiceHeld(), false);
+  assert.strictEqual(autoReplyControl.enable({ clearPausedChats: true }), true);
+  assert.strictEqual(autoReplyControl.isEnabled(), true);
+  process.env.BOT_SUSPENDED = "1";
+  assert.strictEqual(autoReplyControl.isEnabled(), false);
+  if (prevHold === undefined) delete process.env.BOT_SUSPENDED;
+  else process.env.BOT_SUSPENDED = prevHold;
+
   cleanup();
   console.log("smoke-stop-start: OK");
 }
