@@ -245,7 +245,7 @@ module.exports = {
   // تجاوز طارئ: BOT_SUSPENDED=0 يشغّل · BOT_SUSPENDED=1 يوقف بغض النظر عن العلم
   // ---------------------------------------------------------------------------
   serviceHold: {
-    suspended: true,
+    suspended: false,
     reason: "إيقاف مؤقت إلى إشعار آخر",
   },
 

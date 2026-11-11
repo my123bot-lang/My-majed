@@ -481,21 +481,23 @@ async function main() {
   delete process.env.BOT_SUSPENDED;
   assert.strictEqual(
     autoReplyControl.isServiceHeld(),
-    true,
-    "الإيقاف المؤقت مثبت في الإعدادات"
+    false,
+    "البوت يعمل: الإيقاف المؤقت غير مثبت"
   );
-  assert.strictEqual(autoReplyControl.isEnabled(), false);
-  assert.strictEqual(autoReplyControl.enable(), false);
+  assert.strictEqual(autoReplyControl.enable(), true);
+  assert.strictEqual(autoReplyControl.isEnabled(), true);
   assert.strictEqual(
     autoReplyControl.holdReason(),
     "إيقاف مؤقت إلى إشعار آخر"
   );
+  process.env.BOT_SUSPENDED = "1";
+  assert.strictEqual(autoReplyControl.isServiceHeld(), true);
+  assert.strictEqual(autoReplyControl.isEnabled(), false);
+  assert.strictEqual(autoReplyControl.enable(), false);
   process.env.BOT_SUSPENDED = "0";
   assert.strictEqual(autoReplyControl.isServiceHeld(), false);
   assert.strictEqual(autoReplyControl.enable({ clearPausedChats: true }), true);
   assert.strictEqual(autoReplyControl.isEnabled(), true);
-  process.env.BOT_SUSPENDED = "1";
-  assert.strictEqual(autoReplyControl.isEnabled(), false);
   if (prevHold === undefined) delete process.env.BOT_SUSPENDED;
   else process.env.BOT_SUSPENDED = prevHold;
 
