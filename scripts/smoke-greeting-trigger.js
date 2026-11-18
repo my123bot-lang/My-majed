@@ -197,6 +197,21 @@ function mockMsg(from, body) {
     !dropped.sent.texts.some((t) => String(t).includes("مرحبا")),
     "انقطاع الحسبة لا يطلب مرحبا"
   );
+  const yearsDropped = mockMsg(droppedFrom, "3 سنوات");
+  ok(
+    (await handleIncomingMessage(yearsDropped.msg)) === true,
+    "اختيار السنوات بلا جلسة لا يُسكت البوت"
+  );
+  ok(
+    yearsDropped.sent.texts.some((t) => String(t).includes("أرسل: 1")),
+    "اختيار السنوات بعد الانقطاع يطلب إرسال 1"
+  );
+  const whatHappened = mockMsg(droppedFrom, "وش صار");
+  ok(
+    (await handleIncomingMessage(whatHappened.msg)) === true,
+    "وش صار بلا جلسة لا يُسكت البوت"
+  );
+
   const restart = mockMsg(droppedFrom, "1");
   ok((await handleIncomingMessage(restart.msg)) === true, "رقم 1 يفتح القائمة بعد الانقطاع");
   ok(restart.sent.menus.length >= 1, "تُرسل القائمة بعد رقم 1");
