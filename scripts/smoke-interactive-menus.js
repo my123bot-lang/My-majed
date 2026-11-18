@@ -403,6 +403,79 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
   );
   sessionStore.clearSession(from);
 
+  function yearMsg(phone, body) {
+    const sent = { texts: [], menus: [] };
+    return {
+      sent,
+      msg: {
+        from: phone,
+        body,
+        type: "chat",
+        sendInteractive: async (menu) => {
+          sent.menus.push(menu);
+          return { ok: true };
+        },
+        reply: async (text) => {
+          sent.texts.push(text);
+        },
+      },
+    };
+  }
+
+  const yearsFrom = "966508090001@c.us";
+  sessionStore.clearSession(yearsFrom);
+  sessionStore.startSession(yearsFrom);
+  const affordable = sessionStore.getSession(yearsFrom);
+  affordable.step = "loan_term_pick";
+  affordable.jobCategory = "civilian";
+  affordable.jobType = "مدني";
+  affordable.salary = 8000;
+  affordable.commitments = 0;
+  affordable.realEstate = "none";
+  affordable.selectedAmount = 25000;
+  const pickedYears = yearMsg(yearsFrom, "3 سنوات");
+  ok(
+    (await handleIncomingMessage(pickedYears.msg)) === true,
+    "اختيار 3 سنوات يُعالَج"
+  );
+  ok(
+    pickedYears.sent.texts.some((t) => String(t).includes("مبلغ التمويل:")),
+    "بعد السنوات تصل تفاصيل الحسبة نصاً"
+  );
+  ok(
+    sessionStore.getSession(yearsFrom)?.step === "application_method",
+    "بعد السنوات يُسأل عن طريقة التقديم"
+  );
+  sessionStore.clearSession(yearsFrom);
+
+  sessionStore.startSession(yearsFrom);
+  const tight = sessionStore.getSession(yearsFrom);
+  tight.step = "loan_term_pick";
+  tight.jobCategory = "civilian";
+  tight.jobType = "مدني";
+  tight.salary = 4000;
+  tight.commitments = 0;
+  tight.realEstate = "none";
+  tight.selectedAmount = 45000;
+  const shortTerm = yearMsg(yearsFrom, "3 سنوات");
+  ok(
+    (await handleIncomingMessage(shortTerm.msg)) === true,
+    "مدة أقصر من القدرة تُعالَج"
+  );
+  ok(
+    shortTerm.sent.texts.some(
+      (t) =>
+        String(t).includes("المدة المسموحة") &&
+        String(t).includes("5- 5 سنوات")
+    ),
+    "السنوات المسموحة تُرسل نصاً حتى لو لم تظهر القائمة"
+  );
+  ok(
+    !shortTerm.sent.texts.some((t) => String(t).includes("مبلغ التمويل:")),
+    "لا تُعرض حسبة لمدة لا تناسب الالتزام"
+  );
+  sessionStore.clearSession(yearsFrom);
+
   console.log("smoke-interactive-menus: OK");
 })().catch((err) => {
   console.error("smoke-interactive-menus FAILED:", err);
