@@ -186,31 +186,28 @@ function mockMsg(from, body) {
   sessionStore.clearSession(droppedFrom);
   const dropped = mockMsg(droppedFrom, "نعم");
   ok(
-    (await handleIncomingMessage(dropped.msg)) === true,
-    "نعم بلا جلسة تُعالَج"
+    (await handleIncomingMessage(dropped.msg)) === false,
+    "نعم بلا جلسة لا تفتح رداً"
   );
   ok(
-    dropped.sent.texts.some((t) => String(t).includes("أرسل: 1")),
-    "انقطاع الحسبة يطلب إرسال 1"
-  );
-  ok(
-    !dropped.sent.texts.some((t) => String(t).includes("مرحبا")),
-    "انقطاع الحسبة لا يطلب مرحبا"
+    !dropped.sent.texts.some((t) => String(t).includes("انقطعت الحسبة")),
+    "لا تُرسل رسالة انقطعت الحسبة"
   );
   const yearsDropped = mockMsg(droppedFrom, "3 سنوات");
   ok(
-    (await handleIncomingMessage(yearsDropped.msg)) === true,
-    "اختيار السنوات بلا جلسة لا يُسكت البوت"
+    (await handleIncomingMessage(yearsDropped.msg)) === false,
+    "اختيار السنوات بلا جلسة لا يرسل انقطعت الحسبة"
   );
   ok(
-    yearsDropped.sent.texts.some((t) => String(t).includes("أرسل: 1")),
-    "اختيار السنوات بعد الانقطاع يطلب إرسال 1"
+    yearsDropped.sent.texts.length === 0,
+    "لا يوجد نص بعد السنوات بلا جلسة"
   );
-  const whatHappened = mockMsg(droppedFrom, "وش صار");
+  const whatHappened = mockMsg(droppedFrom, "الله يكتب الي فيه الخير");
   ok(
-    (await handleIncomingMessage(whatHappened.msg)) === true,
-    "وش صار بلا جلسة لا يُسكت البوت"
+    (await handleIncomingMessage(whatHappened.msg)) === false,
+    "الكلام العادي بلا جلسة لا يفتح رسالة الانقطاع"
   );
+  ok(whatHappened.sent.texts.length === 0, "لا رد على الكلام العادي");
 
   const restart = mockMsg(droppedFrom, "1");
   ok((await handleIncomingMessage(restart.msg)) === true, "رقم 1 يفتح القائمة بعد الانقطاع");

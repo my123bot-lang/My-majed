@@ -522,12 +522,12 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
   sessionStore.closeRejected(debtFrom);
   const closedReply = yearMsg(debtFrom, "11498");
   ok(
-    (await handleIncomingMessage(closedReply.msg)) === true,
-    "جلسة مغلقة لا تبتلع رقم الالتزامات"
+    (await handleIncomingMessage(closedReply.msg)) === false,
+    "الجلسة المغلقة لا ترسل رسالة انقطعت الحسبة"
   );
   ok(
-    closedReply.sent.texts.some((t) => String(t).includes("أرسل: 1")),
-    "الجلسة المغلقة تطلب إرسال 1"
+    !closedReply.sent.texts.some((t) => String(t).includes("انقطعت الحسبة")),
+    "لا نص انقطاع بعد إغلاق الجلسة"
   );
   sessionStore.clearSession(debtFrom);
 
