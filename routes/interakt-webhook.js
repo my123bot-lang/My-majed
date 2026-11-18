@@ -8,6 +8,7 @@ const express = require("express");
 const {
   verifySignature,
   parseInboundMessage,
+  parseButtonClick,
   parseOwnerOutboundActivity,
 } = require("../lib/interakt-webhook");
 const { createInteraktMessage } = require("../lib/interakt-adapter");
@@ -27,6 +28,7 @@ const {
   isOwnerControlPhone,
 } = require("../lib/owner-remote-control");
 const { sendWhatsAppTextViaInterakt } = require("../lib/interakt-client");
+const { isRecentBotText } = require("../lib/bot-outbound-guard");
 const { rememberActiveCustomer } = require("../lib/last-active-customer");
 const customerLeads = require("../lib/customer-leads");
 const { enqueueTurn } = require("../lib/inbound-turn-queue");
@@ -102,6 +104,11 @@ async function processOwnerOutbound(outbound) {
       );
     }
     return handled;
+  }
+
+  if (outbound.body && isRecentBotText(outbound.body)) {
+    console.log("[interakt] صدى رد البوت — لا يوقف العميل");
+    return false;
   }
 
   // أي رد يدوي من الوكيل/المالك على هذا العميل = إيقاف الرد الآلي له فقط
@@ -272,6 +279,23 @@ router.post("/", (req, res) => {
       processOwnerOutbound(ownerOutbound).catch((err) =>
         console.error("[interakt] فشل معالجة صادر المالك:", err)
       );
+    });
+    return;
+  }
+
+  const clicked = parseButtonClick(payload);
+  if (clicked) {
+    console.log(
+      "[interakt] ضغطة زر:",
+      clicked.body,
+      String(clicked.phone || "").slice(-4)
+    );
+    setImmediate(() => {
+      enqueueTurn(
+        clicked.phone || clicked.messageId || "interakt",
+        { body: clicked.body, messageId: clicked.messageId },
+        () => processInbound(clicked)
+      ).catch((err) => console.error("[interakt] فشل ضغطة الزر:", err));
     });
     return;
   }

@@ -28,6 +28,7 @@ const {
   isOwnerControlPhone,
 } = require("../lib/owner-remote-control");
 const { enqueueTurn } = require("../lib/inbound-turn-queue");
+const { isRecentBotText } = require("../lib/bot-outbound-guard");
 
 const router = express.Router();
 
@@ -59,6 +60,11 @@ async function processOwnerEcho(echo) {
     String(echo.phone).slice(-4),
     String(echo.body || "").slice(0, 40)
   );
+
+  if (echo.body && isRecentBotText(echo.body)) {
+    console.log("[meta] صدى رد البوت — لا يوقف العميل");
+    return;
+  }
 
   const cmd = autoReplyControl.parseOwnerCommand(echo.body);
   if (cmd) {
