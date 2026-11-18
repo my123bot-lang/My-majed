@@ -1,15 +1,10 @@
 /**
- * اختيار القطاع العسكري أو الخاص يُغلق المحادثة فوراً بنص الاعتذار،
- * بينما المدني الحكومي والمتقاعد يكملان لسؤال الراتب.
+ * العسكري يكمل لسؤال الراتب، والقطاع الخاص يبحث عن الشركة المعتمدة.
+ * الحكومي والمتقاعد يكملان لسؤال الراتب.
  */
 const assert = require("assert");
 const sessionStore = require("../lib/session");
 const { handleIncomingMessage } = require("../lib/handlers");
-
-const MILITARY =
-  "نعتذر منكم التمويل غير متاح في الوقت الحالي للقطاع العسكري";
-const PRIVATE =
-  "نعتذر منكم التمويل غير متاح في الوقت الحالي للقطاع الخاص";
 
 function ok(cond, msg) {
   assert.ok(cond, msg);
@@ -36,7 +31,6 @@ function mockMsg(from, body, extra = {}) {
 
 async function openJobType(from, inquiryText) {
   sessionStore.clearSession(from);
-  sessionStore.startSession(from);
   const opening = mockMsg(from, inquiryText);
   const handled = await handleIncomingMessage(opening.msg);
   ok(handled === true, `${inquiryText} ينتقل لسؤال القطاع`);
@@ -44,6 +38,14 @@ async function openJobType(from, inquiryText) {
     sessionStore.getSession(from)?.step === "job_type",
     `بعد ${inquiryText} الخطوة هي نوع القطاع`
   );
+}
+
+function asksSalary(sent) {
+  return sent.texts.some((t) => String(t).includes("أرسل راتبك الشهري"));
+}
+
+function asksCompany(sent) {
+  return sent.texts.some((t) => String(t).includes("اسم الشركة"));
 }
 
 (async () => {
@@ -54,13 +56,19 @@ async function openJobType(from, inquiryText) {
     (await handleIncomingMessage(military.msg)) === true,
     "اختيار عسكري يُعالَج"
   );
+  ok(asksSalary(military.sent), "العسكري يكمل لسؤال الراتب");
   ok(
-    military.sent.texts.length === 1 && military.sent.texts[0] === MILITARY,
-    "اعتذار العسكري بالنص المطلوب فقط"
+    !military.sent.texts.some((t) => String(t).includes("غير متاح")),
+    "لا يُرسل اعتذار إيقاف للعسكري"
   );
-  ok(military.sent.menus.length === 0, "لا تُرسل قائمة بعد اعتذار العسكري");
-  ok(!sessionStore.getSession(militaryFrom), "جلسة العسكري تُغلق فوراً");
-  ok(sessionStore.isClosed(militaryFrom), "العميل العسكري يُسجَّل مغلقاً");
+  ok(
+    sessionStore.getSession(militaryFrom)?.step === "salary",
+    "جلسة العسكري تبقى على الراتب"
+  );
+  ok(
+    sessionStore.getSession(militaryFrom)?.jobCategory === "military",
+    "جلسة العسكري تحفظ القطاع"
+  );
 
   const militaryIdFrom = "966501110202@c.us";
   await openJobType(militaryIdFrom, "شراء مديونية");
@@ -71,17 +79,21 @@ async function openJobType(from, inquiryText) {
     (await handleIncomingMessage(militaryId.msg)) === true,
     "زر عسكري في شراء المديونية يُعالَج"
   );
+  ok(asksSalary(militaryId.sent), "العسكري في شراء المديونية يكمل للراتب");
   ok(
-    militaryId.sent.texts[0] === MILITARY,
-    "نفس اعتذار العسكري في مسار شراء المديونية"
+    sessionStore.getSession(militaryIdFrom)?.step === "salary",
+    "جلسة المديونية العسكرية تبقى على الراتب"
   );
-  ok(!sessionStore.getSession(militaryIdFrom), "جلسة المديونية العسكرية تُغلق");
 
   const digitFrom = "966501110203@c.us";
   await openJobType(digitFrom, "تمويل شخصي");
   const digit = mockMsg(digitFrom, "2");
   await handleIncomingMessage(digit.msg);
-  ok(digit.sent.texts[0] === MILITARY, "رقم 2 في سؤال القطاع = اعتذار عسكري");
+  ok(asksSalary(digit.sent), "رقم 2 في سؤال القطاع = عسكري ويكمل للراتب");
+  ok(
+    sessionStore.getSession(digitFrom)?.jobCategory === "military",
+    "رقم 2 يحفظ القطاع العسكري"
+  );
 
   const privateFrom = "966501110204@c.us";
   await openJobType(privateFrom, "تمويل شخصي");
@@ -105,16 +117,19 @@ async function openJobType(from, inquiryText) {
     (await handleIncomingMessage(privateChoice.msg)) === true,
     "اختيار قطاع خاص يُعالَج"
   );
+  ok(asksCompany(privateChoice.sent), "القطاع الخاص يُطلب منه اسم الشركة");
   ok(
-    privateChoice.sent.texts.length === 1 &&
-      privateChoice.sent.texts[0] === PRIVATE,
-    "اعتذار القطاع الخاص بالنص المطلوب فقط"
+    !privateChoice.sent.texts.some((t) => String(t).includes("غير متاح")),
+    "لا يُرسل اعتذار إيقاف للقطاع الخاص"
   );
   ok(
-    !privateChoice.sent.texts.some((t) => String(t).includes("اسم الشركة")),
-    "لا يُطلب اسم الشركة بعد القطاع الخاص"
+    sessionStore.getSession(privateFrom)?.step === "company_search",
+    "جلسة القطاع الخاص تبقى على البحث عن الشركة"
   );
-  ok(!sessionStore.getSession(privateFrom), "جلسة القطاع الخاص تُغلق فوراً");
+  ok(
+    sessionStore.getSession(privateFrom)?.civilianSector === "private",
+    "جلسة القطاع الخاص تحفظ الجهة"
+  );
 
   const privateIdFrom = "966501110205@c.us";
   await openJobType(privateIdFrom, "شراء مديونية");
@@ -124,20 +139,20 @@ async function openJobType(from, inquiryText) {
   });
   await handleIncomingMessage(privateId.msg);
   ok(
-    privateId.sent.texts[0] === PRIVATE,
-    "زر قطاع خاص في شراء المديونية يعتذر فوراً"
+    asksCompany(privateId.sent),
+    "زر قطاع خاص في شراء المديونية يطلب اسم الشركة"
   );
-  ok(!sessionStore.getSession(privateIdFrom), "جلسة الخاص في المديونية تُغلق");
+  ok(
+    sessionStore.getSession(privateIdFrom)?.step === "company_search",
+    "جلسة الخاص في المديونية تبقى على البحث عن الشركة"
+  );
 
   const govFrom = "966501110206@c.us";
   await openJobType(govFrom, "تمويل شخصي");
   await handleIncomingMessage(mockMsg(govFrom, "مدني").msg);
   const gov = mockMsg(govFrom, "حكومي");
   ok((await handleIncomingMessage(gov.msg)) === true, "اختيار حكومي يُعالَج");
-  ok(
-    gov.sent.texts.some((t) => String(t).includes("أرسل راتبك الشهري")),
-    "القطاع الحكومي يكمل لسؤال الراتب"
-  );
+  ok(asksSalary(gov.sent), "القطاع الحكومي يكمل لسؤال الراتب");
   ok(
     sessionStore.getSession(govFrom)?.step === "salary",
     "جلسة الحكومي تبقى على الراتب"
@@ -151,10 +166,7 @@ async function openJobType(from, inquiryText) {
     retired.sent.texts.some((t) => String(t).includes("تم اختيار: متقاعد")),
     "المتقاعد يرى تنبيه العمر"
   );
-  ok(
-    retired.sent.texts.some((t) => String(t).includes("أرسل راتبك الشهري")),
-    "المتقاعد يكمل لسؤال الراتب"
-  );
+  ok(asksSalary(retired.sent), "المتقاعد يكمل لسؤال الراتب");
   ok(
     sessionStore.getSession(retiredFrom)?.step === "salary",
     "جلسة المتقاعد تبقى مفتوحة"
