@@ -168,19 +168,24 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
 
 (async () => {
   let sentMenu = null;
+  const listTexts = [];
   await replyMenu(
     {
       sendInteractive: async (menu) => {
         sentMenu = menu;
         return { ok: true };
       },
-      reply: async () => {
-        throw new Error("should not fallback to text");
+      reply: async (body) => {
+        listTexts.push(body);
       },
     },
     main
   );
   ok(sentMenu === main, "replyMenu يرسل التفاعلي عند التوفر");
+  ok(
+    listTexts.some((body) => String(body).includes("1- تمويل شخصي")),
+    "القائمة تُرسل نصاً أيضاً حتى لو نجح التفاعلي ولم يظهر على الجوال"
+  );
 
   let fallbackText = "";
   await replyMenu(
@@ -475,6 +480,56 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "لا تُعرض حسبة لمدة لا تناسب الالتزام"
   );
   sessionStore.clearSession(yearsFrom);
+
+  const debtFrom = "966506570099@c.us";
+  sessionStore.clearSession(debtFrom);
+  sessionStore.startSession(debtFrom);
+  const debt = sessionStore.getSession(debtFrom);
+  debt.flow = "debt_purchase";
+  debt.step = "commitments";
+  debt.jobCategory = "civilian";
+  debt.salary = 12000;
+  debt.realEstate = "supported";
+  debt.supportAmount = 414;
+  const commitments = yearMsg(debtFrom, "11498");
+  ok(
+    (await handleIncomingMessage(commitments.msg)) === true,
+    "التزامات شراء المديونية تُعالَج"
+  );
+  ok(
+    commitments.sent.texts.some((t) =>
+      String(t).includes("كم مبلغ شراء المديونية")
+    ),
+    "بعد الالتزامات يُسأل عن مبلغ المديونية نصاً"
+  );
+  sessionStore.clearSession(debtFrom);
+
+  sessionStore.startSession(debtFrom);
+  const menuSession = sessionStore.getSession(debtFrom);
+  menuSession.step = "inquiry_type";
+  const unknown = yearMsg(debtFrom, "11498");
+  ok(
+    (await handleIncomingMessage(unknown.msg)) === true,
+    "رقم غير مفهوم على القائمة لا يُسكت البوت"
+  );
+  ok(
+    unknown.sent.texts.some((t) => String(t).includes("تمويل شخصي")),
+    "القائمة تُعاد نصاً عند جواب غير مفهوم"
+  );
+  sessionStore.clearSession(debtFrom);
+
+  sessionStore.startSession(debtFrom);
+  sessionStore.closeRejected(debtFrom);
+  const closedReply = yearMsg(debtFrom, "11498");
+  ok(
+    (await handleIncomingMessage(closedReply.msg)) === true,
+    "جلسة مغلقة لا تبتلع رقم الالتزامات"
+  );
+  ok(
+    closedReply.sent.texts.some((t) => String(t).includes("أرسل: 1")),
+    "الجلسة المغلقة تطلب إرسال 1"
+  );
+  sessionStore.clearSession(debtFrom);
 
   console.log("smoke-interactive-menus: OK");
 })().catch((err) => {
