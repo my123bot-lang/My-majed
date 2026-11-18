@@ -182,6 +182,26 @@ function mockMsg(from, body) {
   ok(salamOnly.sent.menus.length >= 1, "تُرسل القائمة بعد سلام");
   sessionStore.clearSession(salamOnlyFrom);
 
+  const droppedFrom = "966501110006@c.us";
+  sessionStore.clearSession(droppedFrom);
+  const dropped = mockMsg(droppedFrom, "نعم");
+  ok(
+    (await handleIncomingMessage(dropped.msg)) === true,
+    "نعم بلا جلسة تُعالَج"
+  );
+  ok(
+    dropped.sent.texts.some((t) => String(t).includes("أرسل: 1")),
+    "انقطاع الحسبة يطلب إرسال 1"
+  );
+  ok(
+    !dropped.sent.texts.some((t) => String(t).includes("مرحبا")),
+    "انقطاع الحسبة لا يطلب مرحبا"
+  );
+  const restart = mockMsg(droppedFrom, "1");
+  ok((await handleIncomingMessage(restart.msg)) === true, "رقم 1 يفتح القائمة بعد الانقطاع");
+  ok(restart.sent.menus.length >= 1, "تُرسل القائمة بعد رقم 1");
+  sessionStore.clearSession(droppedFrom);
+
   const { enqueueTurn } = require("../lib/inbound-turn-queue");
   const turnOrder = [];
   let releaseFirst;
