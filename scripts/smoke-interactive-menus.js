@@ -321,12 +321,12 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "القائمة تُجرَّب أولاً عندما لا يكون هناك فشل"
   );
   ok(
-    nextInteractiveAttempt("list", { listFailed: true }) === "buttons",
-    "مهلة القائمة أو رفضها يحوّل نفس الخيارات إلى أزرار لا إلى نص"
+    nextInteractiveAttempt("list", { listFailed: true }) === "list",
+    "فشل القائمة لا يحوّلها إلى رسائل أزرار مقسّمة"
   );
   ok(
-    nextInteractiveAttempt("list", { listPaused: true }) === "buttons",
-    "بعد إيقاف القائمة مؤقتاً نرسل أزراراً بدون انتظار القائمة"
+    nextInteractiveAttempt("list", { listPaused: true }) === "list",
+    "القائمة تبقى قائمة واحدة حتى بعد محاولة فاشلة"
   );
   ok(
     nextInteractiveAttempt("buttons", { listPaused: true, listFailed: true }) ===
@@ -337,8 +337,8 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     nextInteractiveAttempt("list", {
       listFailed: true,
       buttonsPaused: true,
-    }) === "text",
-    "النص المرقّم فقط إذا فشلت الأزرار أيضاً"
+    }) === "list",
+    "القائمة لا تتحول إلى نص مرقم عند فشل محاولة سابقة"
   );
   ok(
     nextInteractiveAttempt("list", { sessionWindow: true }) === "text" &&
