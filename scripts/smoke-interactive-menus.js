@@ -346,6 +346,63 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "خارج نافذة 24 ساعة لا نعيد محاولة التفاعل"
   );
 
+  const { resolveInboundBody, parseButtonClick } = require("../lib/interakt-webhook");
+  const { handleIncomingMessage } = require("../lib/handlers");
+  const sessionStore = require("../lib/session");
+
+  const buttonBody = resolveInboundBody(
+    {
+      message_content_type: "InteractiveButtonReply",
+      message: "هل ترغب بمبلغ تمويل أقل؟",
+      button_text: "نعم",
+    },
+    "1"
+  );
+  ok(buttonBody === "نعم", "ضغطة نعم لا تُقرأ كنص السؤال");
+
+  const click = parseButtonClick({
+    type: "message_api_clicked",
+    data: {
+      customer: { channel_phone_number: "966545881234" },
+      message: {
+        id: "btn1",
+        button_text: "نعم",
+        click_type: "QR",
+        message: "هل ترغب بمبلغ تمويل أقل؟",
+      },
+    },
+  });
+  ok(click && click.body === "نعم", "message_api_clicked يُعامل كاختيار العميل");
+
+  const from = "966545880099@c.us";
+  sessionStore.clearSession(from);
+  sessionStore.startSession(from);
+  const session = sessionStore.getSession(from);
+  session.step = "lower_amount_choice";
+  session.roundedAmount = 55000;
+  const sent = { texts: [], menus: [] };
+  const yesMsg = {
+    from,
+    body: "نعم",
+    type: "chat",
+    sendInteractive: async (menu) => {
+      sent.menus.push(menu);
+      return { ok: true };
+    },
+    reply: async (text) => {
+      sent.texts.push(text);
+    },
+  };
+  ok(
+    (await handleIncomingMessage(yesMsg)) === true,
+    "نعم بعد مبلغ التمويل يُكمل المحادثة"
+  );
+  ok(
+    sent.texts.some((t) => t.includes("50,000") && t.includes("اختر المبلغ")),
+    "تُرسل قائمة المبالغ الأقل نصاً حتى لو تعطل القالب التفاعلي"
+  );
+  sessionStore.clearSession(from);
+
   console.log("smoke-interactive-menus: OK");
 })().catch((err) => {
   console.error("smoke-interactive-menus FAILED:", err);
