@@ -168,24 +168,19 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
 
 (async () => {
   let sentMenu = null;
-  const listTexts = [];
   await replyMenu(
     {
       sendInteractive: async (menu) => {
         sentMenu = menu;
         return { ok: true };
       },
-      reply: async (body) => {
-        listTexts.push(body);
+      reply: async () => {
+        throw new Error("should not fallback to text");
       },
     },
     main
   );
   ok(sentMenu === main, "replyMenu يرسل التفاعلي عند التوفر");
-  ok(
-    listTexts.some((body) => String(body).includes("1- تمويل شخصي")),
-    "القائمة تُرسل نصاً أيضاً حتى لو نجح التفاعلي ولم يظهر على الجوال"
-  );
 
   let fallbackText = "";
   await replyMenu(
@@ -403,8 +398,15 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "نعم بعد مبلغ التمويل يُكمل المحادثة"
   );
   ok(
-    sent.texts.some((t) => t.includes("50,000") && t.includes("اختر المبلغ")),
-    "تُرسل قائمة المبالغ الأقل نصاً حتى لو تعطل القالب التفاعلي"
+    sent.menus.some((menu) =>
+      JSON.stringify(menu).includes("50,000") ||
+      JSON.stringify(menu).includes("50000")
+    ),
+    "قائمة المبالغ الأقل تُرسل أزراراً فقط"
+  );
+  ok(
+    !sent.texts.some((t) => String(t).includes("اختر المبلغ")),
+    "لا يُرسل نص مرقم مع قائمة المبالغ"
   );
   sessionStore.clearSession(from);
 
@@ -468,12 +470,14 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "مدة أقصر من القدرة تُعالَج"
   );
   ok(
-    shortTerm.sent.texts.some(
-      (t) =>
-        String(t).includes("المدة المسموحة") &&
-        String(t).includes("5- 5 سنوات")
+    shortTerm.sent.menus.some((menu) =>
+      String(menu.body || "").includes("المدة المسموحة")
     ),
-    "السنوات المسموحة تُرسل نصاً حتى لو لم تظهر القائمة"
+    "السنوات المسموحة تُرسل كقائمة أزرار"
+  );
+  ok(
+    !shortTerm.sent.texts.some((t) => String(t).includes("5- 5 سنوات")),
+    "لا يُرسل نص مرقم مع سنوات التمويل"
   );
   ok(
     !shortTerm.sent.texts.some((t) => String(t).includes("مبلغ التمويل:")),
@@ -513,8 +517,14 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "رقم غير مفهوم على القائمة لا يُسكت البوت"
   );
   ok(
-    unknown.sent.texts.some((t) => String(t).includes("تمويل شخصي")),
-    "القائمة تُعاد نصاً عند جواب غير مفهوم"
+    unknown.sent.menus.some((menu) =>
+      JSON.stringify(menu).includes("تمويل شخصي")
+    ),
+    "القائمة تُعاد أزراراً عند جواب غير مفهوم"
+  );
+  ok(
+    !unknown.sent.texts.some((t) => String(t).includes("1- تمويل شخصي")),
+    "لا يُرسل نص مرقم مع قائمة الاستفسار"
   );
   sessionStore.clearSession(debtFrom);
 
