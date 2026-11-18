@@ -199,6 +199,25 @@ ok(waRows[6].id === "7", "صف سياسة الرواتب يحافظ على ال�
     "إذا فشل التفاعلي يُرسل النص المرقّم حتى لا يصمت البوت"
   );
 
+  let timeoutText = "";
+  await replyMenu(
+    {
+      sendInteractive: async () => {
+        const err = new Error("Interakt timeout after 2500ms");
+        err.status = 408;
+        throw err;
+      },
+      reply: async (body) => {
+        timeoutText = body;
+      },
+    },
+    menus.jobTypeInvalid()
+  );
+  ok(
+    timeoutText === "",
+    "مهلة الأزرار لا ترسل النص المرقم لأن الرسالة قد تكون وصلت"
+  );
+
   const spec = buildMenuPollSpec(main);
   ok(
     spec &&
